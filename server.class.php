@@ -1,0 +1,1 @@
+<?php/** * oauth服务端 */if (!defined('IN_DISCUZ')) {    exit('Access Denied');}class threadplugin_oauth2{}
