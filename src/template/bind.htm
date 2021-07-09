@@ -1,0 +1,277 @@
+<!--{template common/header}-->
+
+<div id="loggingbox" class="loggingbox">
+    <div class="loging_tit cl">
+        <div class="z">
+            <p class="welcome mbn cl" style="clear:both; width:100%; "><strong>Hi</strong>,<strong>{$resp[name]}</strong>,
+                <span class="xg2">欢迎使用GitHub帐号登录</span></p>
+            <ul class="tb cl z">
+                <li id="connect_tab_1" $connect_tab_1><a id="loginlist" href="javascript:;"
+                                                         onclick="_switch(1);this.blur();" tabindex="900">{lang
+                    connect_register_profile}</a></li>
+                <li id="connect_tab_2" $connect_tab_2><a id="loginlist2" href="javascript:;"
+                                                         onclick="_switch(2);this.blur();" tabindex="900">{lang
+                    connect_register_bind}</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    function _switch(id) {
+        if (id === 1) {
+            $('register').style.display = 'block';
+            $('login').style.display = 'none';
+        } else {
+            $('register').style.display = 'none';
+            $('login').style.display = 'block';
+        }
+    }
+</script>
+
+<style type="text/css">
+    .loggingbox {
+        width: 760px;
+        margin: 40px auto 0;
+    }
+
+    .loging_tit {
+        border-bottom: 1px solid #CCC;
+        _overflow: hidden;
+    }
+
+    .ie_all .loging_tit {
+        height: 66px;
+    }
+
+    .loggingbox .fm_box {
+        border-bottom: 0;
+        padding: 20px 0;
+    }
+
+    .loggingbox .welcome {
+        font-size: 14px;
+        width: 100%;
+        line-height: 30px;
+    }
+
+    .loggingbox .welcome span {
+        font-size: 12px;
+    }
+
+    .loggingbox .avt img {
+        margin: 0 5px 5px 0;
+        padding: 0;
+        border: 0;
+        width: 60px;
+        height: 60px;
+    }
+
+    .loggingbox .tb {
+        border-bottom: 0;
+        margin-top: 0;
+        padding-left: 0px;
+    }
+
+    .loggingbox .tb a {
+        background: #F6F6F6;
+        padding: 0 20px;
+    }
+
+    .loggingbox .tb .a a {
+        background: #FFF;
+    }
+</style>
+<script type="text/javascript">
+    var strongpw = new Array();
+    <!--{if $_G['setting']['strongpw']}-->
+    <!--{loop $_G['setting']['strongpw'] $key $val}-->
+    strongpw[$key] = $val;
+    <!--{/loop}-->
+    <!--{/if}-->
+    var pwlength = <!--{if $_G['setting']['pwlength']}-->$_G['setting']['pwlength']<!--{else}-->
+    0<!--{/if}-->;
+</script>
+<div id="register">
+    <form method="post" autocomplete="off" name="register" id="registerform" enctype="multipart/form-data"
+          onsubmit="checksubmit();return false;" action="plugin.php?id=codfrm_oauth2:bind&p=github&op=register&inajax=1"
+          style="display: block;">
+        <div id="layer_reg" class="bm_c">
+            <input type="hidden" name="regsubmit" value="yes"/>
+            <input type="hidden" name="formhash" value="{FORMHASH}"/>
+            <input type="hidden" name="referer" value="{echo dreferer()}"/>
+
+            <div id="reginfo_a">
+                <div class="rfm">
+                    <div class="avt y" style="position: relative;z-index: 10;">
+                        <img src="{$resp['avatar_url']}">
+                    </div>
+                    <table>
+                        <tr>
+                            <th><span class="rq">*</span><label for="username">{lang username}:</label></th>
+                            <td><input type="text" id="username" name="" class="px" tabindex="1"
+                                       value="{echo dhtmlspecialchars($resp['login'])}" autocomplete="off"
+                                       size="25" maxlength="15" required/></td>
+                            <td class="tipcol"><i id="tip_username" class="p_tip">{lang register_username_tips}</i><kbd
+                                    id="chk_username" class="p_chk"></kbd></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="rfm" style="display: none;">
+                    <table>
+                        <tr>
+                            <th><span class="rq">*</span><label for="password">密码:</label></th>
+                            <td><input type="password" id="password" name="" size="25" tabindex="1" class="px"></td>
+                            <td class="tipcol"><i id="tip_password" class="p_tip" style="display: none;">请填写密码, 最小长度为 6
+                                个字符</i><kbd id="chk_password" class="p_chk"></kbd></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="rfm" style="display: none;">
+                    <table>
+                        <tr>
+                            <th><span class="rq">*</span><label for="password2">确认密码:</label></th>
+                            <td><input type="password" id="password2" name="" size="25" tabindex="1" value=""
+                                       class="px"></td>
+                            <td class="tipcol"><i id="tip_password2" class="p_tip"
+                                                  style="display: none;">请再次输入密码</i><kbd
+                                    id="chk_password2" class="p_chk"></kbd></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="rfm">
+                    <table>
+                        <tr>
+                            <th><span class="rq">*</span><label for="email">{lang
+                                email}:</label></th>
+                            <td><input type="text" id="email" name="" autocomplete="off" size="25" tabindex="1"
+                                       class="px" value="{$resp['email']}" required/><br/><em id="emailmore">&nbsp;</em>
+                            </td>
+                            <td class="tipcol"><i id="tip_email" class="p_tip">{lang register_email_tips}</i><kbd
+                                    id="chk_email" class="p_chk"></kbd></td>
+                        </tr>
+                    </table>
+                </div>
+
+                <input type="hidden" id="is_notify" name="is_notify" value="1">
+                <input type="hidden" id="is_feed" name="is_feed" value="">
+            </div>
+
+        </div>
+
+        <div id="layer_reginfo_b">
+            <div class="rfm mbw bw0">
+                <table width="100%">
+                    <tr>
+                        <th>&nbsp;</th>
+                        <td>
+<span id="reginfo_a_btn">
+<em>&nbsp;</em><button class="pn pnc" id="registerformsubmit" type="submit" name="regsubmit" value="true"
+                       tabindex="1"><span>完成，继续浏览</span></button>
+</span>
+                        </td>
+                        <td></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </form>
+
+    <script type="text/javascript" src="{$_G['setting'][jspath]}register.js?{VERHASH}"></script>
+
+    <script type="text/javascript">
+        var ignoreEmail = false;
+        addFormEvent('registerform', 0);
+    </script>
+
+</div>
+
+<div id="login" {if $_G['setting']['regconnect']} style="display:none"{/if}>
+<form method="post" autocomplete="off" name="login" id="loginform_$loginhash" class="cl" onsubmit="ajaxpost('loginform_$loginhash', 'returnmessage3',
+    'returnmessage3', 'onerror');return false;" action="plugin.php?id=codfrm_oauth2:bind&p=github&op=bind2">
+    <div class="c cl bm_c">
+        <input type="hidden" name="formhash" value="{FORMHASH}"/>
+        <input type="hidden" name="referer" value="{echo dreferer()}"/>
+        <input type="hidden" name="loginsubmit" value="yes"/>
+
+        <div class="rfm">
+            <table>
+                <tr>
+                    <th>
+                        <!--{if $_G['setting']['autoidselect']}-->
+                        <label for="username">{lang login_id}:</label>
+                        <!--{else}-->
+                        <span class="login_slct">
+									<select name="loginfield" style="float: left;" width="45"
+                                            id="loginfield_$loginhash">
+										<option value="username">{lang username}</option>
+										<option value="uid">{lang uid}</option>
+										<option value="email">{lang email}</option>
+									</select>
+								</span>
+                        <!--{/if}-->
+                    </th>
+                    <td><input type="text" name="username" id="username_$loginhash" autocomplete="off" size="36"
+                               class="txt" tabindex="1" value="$username"/></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="rfm">
+            <table>
+                <tr>
+                    <th><label for="password3_$loginhash">{lang login_password}:</label></th>
+                    <td><input type="password" id="password3_$loginhash" name="password" size="36" class="txt"
+                               tabindex="1"/></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="rfm">
+            <table>
+                <tr>
+                    <th>{lang security_q}:</th>
+                    <td><select id="loginquestionid_$loginhash" width="213" name="questionid"
+                                onchange="if($('loginquestionid_$loginhash').value > 0) $('loginanswer_row_$loginhash').style.display=''; else $('loginanswer_row_$loginhash').style.display='none'">
+                        <option value="0">{lang security_question}</option>
+                        <option value="1">{lang security_question_1}</option>
+                        <option value="2">{lang security_question_2}</option>
+                        <option value="3">{lang security_question_3}</option>
+                        <option value="4">{lang security_question_4}</option>
+                        <option value="5">{lang security_question_5}</option>
+                        <option value="6">{lang security_question_6}</option>
+                        <option value="7">{lang security_question_7}</option>
+                    </select></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="rfm" id="loginanswer_row_$loginhash" style="display:none">
+            <table>
+                <tr>
+                    <th>{lang security_a}:</th>
+                    <td><input type="text" name="answer" id="loginanswer_$loginhash" autocomplete="off" size="36"
+                               class="txt" tabindex="1"/></td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="rfm mbw bw0">
+        <table>
+            <tr>
+                <th>&nbsp;</th>
+                <td>
+                    <button class="pn pnc" type="submit" name="loginsubmit" value="true" tabindex="1"><strong>{lang
+                        qqconnect:connect_register_bind_window_button}</strong></button>
+                </td>
+            </tr>
+        </table>
+    </div>
+</form>
+</div>
+
+
+<!--{template common/footer}-->
