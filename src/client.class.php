@@ -17,6 +17,12 @@ class plugin_codfrm_oauth2
     {
     }
 
+    public function global_login_text()
+    {
+
+        return tpl_global_oauth_login_extra();
+    }
+
     public function global_login_extra()
     {
 
