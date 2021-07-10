@@ -88,6 +88,9 @@ switch ($_GET['op']) {
         if (!$raw) {
             return showmessage('没有绑定GitHub账号', dreferer(), [], ['alert' => 'error', 'refreshtime' => 5, 'referer' => rawurlencode(dreferer())]);
         }
+        if (time() < $raw['createtime'] + 86400 * 60) {
+            return showmessage('绑定60天后才能解除绑定', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', [], ['alert' => 'error', 'refreshtime' => 3]);
+        }
         C::t('#codfrm_oauth2#oauth_github')->delete($raw['id']);
         return showmessage('解绑成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', [], ['alert' => 'right', 'refreshtime' => 3]);
     default:
@@ -108,6 +111,9 @@ function fetchGithub($code)
     if (!$resp['access_token']) {
         return showmessage(('系统错误,请反馈给网站管理员:{message}'), dreferer(), ['message' => $resp['error_description']], ['alert' => 'error', 'refreshtime' => 5, 'referer' => rawurlencode(dreferer())]);
     }
+    //NOTE: 直接存的session,以后优化吧
+    session_start();
+    $_SESSION['oauth_github_at'] = $resp['access_token'];
     $resp = githubUser($resp['access_token']);
     if (!$resp) {
         return showmessage('系统网络错误,请反馈给网站管理员', dreferer(), [], ['alert' => 'error', 'refreshtime' => 5, 'referer' => rawurlencode(dreferer())]);
@@ -125,9 +131,6 @@ function github()
     $table = new table_oauth_github();
     $raw = $table->fetchByGithub($resp['id']);
     if (!$raw) {
-        //NOTE: 直接存的session,以后优化吧
-        session_start();
-        $_SESSION['oauth_github_at'] = $resp['access_token'];
         //去注册
         dheader('Location:' . ($_G['siteurl'] . 'plugin.php?id=codfrm_oauth2:bind&op=bind'));
     } else {
