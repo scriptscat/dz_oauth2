@@ -36,7 +36,6 @@ class  plugin_codfrm_oauth2_member extends plugin_codfrm_oauth2
     public function logging_input()
     {
         global $_G;
-        $setting = $_G['cache']['plugin']['codfrm_oauth2'];
 
         return tpl_global_oauth_usernv_extra();
     }

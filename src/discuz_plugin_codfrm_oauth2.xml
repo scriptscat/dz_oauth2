@@ -14,7 +14,7 @@
             <item id="datatables"><![CDATA[]]></item>
             <item id="directory"><![CDATA[codfrm_oauth2/]]></item>
             <item id="copyright"><![CDATA[blog.icodef.com]]></item>
-            <item id="version"><![CDATA[1.0.0]]></item>
+            <item id="version"><![CDATA[1.1.0]]></item>
             <item id="__modules">
                 <item id="0">
                     <item id="name"><![CDATA[client]]></item>
@@ -74,7 +74,7 @@
                 <item id="description"><![CDATA[]]></item>
                 <item id="variable"><![CDATA[github_oauth_secret]]></item>
                 <item id="type"><![CDATA[text]]></item>
-                <item id="value"><![CDATA[x]]></item>
+                <item id="value"><![CDATA[]]></item>
                 <item id="extra"><![CDATA[]]></item>
             </item>
         </item>

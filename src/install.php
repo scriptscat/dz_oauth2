@@ -20,3 +20,5 @@ CREATE TABLE IF NOT EXISTS `pre_coauth_github` (
 EOF;
 
 runquery($sql);
+
+$finish = true;

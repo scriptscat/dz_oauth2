@@ -1,0 +1,56 @@
+<!--{template common/header}-->
+<div id="wp" class="wp">
+    <div id="ct" class="ptm wp cl">
+        <div class="mm">
+            <div class="bm" id="main_message">
+
+                <div class="bm_h bbs" id="main_hnav">
+                    <h3 id="layer_reginfo_t" class="xs2">用户信息授权</h3>
+                </div>
+                <form method="post" action="plugin.php?id=codfrm_oauth2:oauth" style="padding: 10px">
+                    <input type="hidden" name="client_id" value="$_GET[client_id]">
+                    <input type="hidden" name="state" value="$_GET[state]">
+                    <input type="hidden" name="scope" value="$_GET[scope]">
+                    <input type="hidden" name="response_type" value="$_GET[response_type]">
+                    <input type="hidden" name="redirect_uri" value="$_GET[redirect_uri]">
+                    <div style="margin:0 auto;width:760px;">
+                        <div>
+                            <div>
+                                <div class="avt" style="position: relative;z-index: 10;">
+                                    <img src="$client[site_logo]">
+                                </div>
+
+                                <span style="font-size: 16px">
+                                    <a href="$client[website]" style="color: #258fff">
+                                        {$client[name]}
+                                    </a>
+                                    申请用户信息授权
+                                </span>
+                            </div>
+                            <br>
+                            <div>
+                                <span style="font-size: 14px">确认之后将获得以下权限:</span>
+                            </div>
+                            <!--                       TODO:先写死用户信息授权了-->
+                            <br>
+                            <div>
+                                <ul>
+                                    <li>获得您的昵称、头像、性别</li>
+                                </ul>
+                            </div>
+                            <br>
+                            <div>
+                                <button onclick="confirmAuth" class="pn pnc"
+                                        style="padding: 4px;height: auto;width: 120px">
+                                    确认授权
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    </divs>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!--{template common/footer}-->

@@ -18,6 +18,7 @@ function githubAccessToken($id, $secret, $code)
             'Accept: application/json',
             'Content-Type: application/x-www-form-urlencoded'
         ),
+        CURLOPT_PROXY => "http://192.168.1.101:1081"
     ));
 
     $response = curl_exec($curl);
@@ -43,6 +44,7 @@ function githubUser($accessToken)
             'Authorization: Bearer ' . $accessToken,
             'User-Agent: github oauth'
         ),
+        CURLOPT_PROXY => "http://192.168.1.101:1081"
     ));
 
     $response = curl_exec($curl);

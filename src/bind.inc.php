@@ -52,7 +52,7 @@ switch ($_GET['op']) {
 
         $resp = getGithubUserInfo();
         $_G['github_login_id'] = $resp['id'];
-        $_G['github_login_name'] = $resp['name'];
+        $_G['github_login_name'] = $resp['name'] ?? $resp['login'];
 
         $ctl_obj = new logging_ctl();
         $_G['setting']['seccodestatus'] = 0;
@@ -75,7 +75,7 @@ switch ($_GET['op']) {
         C::t('#codfrm_oauth2#oauth_github')->insert(array(
             'uid' => $_G['uid'],
             'openid' => $resp['id'],
-            'name' => $resp['name'],
+            'name' => $resp['name'] ?? $resp['login'],
             'createtime' => time()
         ));
         return showmessage('绑定成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', [], ['alert' => 'right', 'refreshtime' => 3]);
@@ -145,8 +145,7 @@ function github()
         $cookietime = 1296000;
         setloginstatus($member, $cookietime);
 
-
-        return showmessage('登录成功,3秒后跳转', dreferer(), [], ['alert' => 'right', 'refreshtime' => 3, 'referer' => rawurlencode(dreferer())]);
+        return showmessage('登录成功,3秒后跳转', $_GET['referer'] ?? dreferer(), [], ['alert' => 'right', 'refreshtime' => 3, 'referer' => rawurlencode($_GET['referer'] ?? dreferer())]);
     }
 }
 
@@ -169,7 +168,7 @@ function register()
 
     $resp = getGithubUserInfo();
     $_G['github_login_id'] = $resp['id'];
-    $_G['github_login_name'] = $resp['name'];
+    $_G['github_login_name'] = $resp['name'] ?? $resp['login'];
 
     $table = new table_oauth_github();
     $raw = $table->fetchByGithub($resp['id']);

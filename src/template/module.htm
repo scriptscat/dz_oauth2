@@ -1,11 +1,12 @@
 {eval
 function tpl_global_oauth_login_extra() {
 global $_G;
+$referer=urlencode(urlencode($_SERVER['HTTP_REFERER']??$_SERVER['REQUEST_URI']));
 }
 <!--{block return}-->
 <div class="y" style="margin: 0 4px; padding-right: 10px">
     <a style="background:#fff;height:20px;padding: 2px;border-radius:5px;line-height:20px;border:1px solid #9c9c9c;display: block;text-decoration: none;cursor: pointer;"
-       href="https://github.com/login/oauth/authorize?client_id={$_G['cache']['plugin']['codfrm_oauth2']['github_oauth_client_id']}&redirect_uri={$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind%26p=github%26op=redirect&response_type=code&scope=read:user,user:email">
+       href="https://github.com/login/oauth/authorize?client_id={$_G['cache']['plugin']['codfrm_oauth2']['github_oauth_client_id']}&redirect_uri={$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind%26p=github%26op=redirect%26referer={$referer}&response_type=code&scope=read:user,user:email">
         <img style="height: 100%;" src="{$_G['siteurl']}source/plugin/codfrm_oauth2/image/github.png"/>
         <span style="color:#000;float: right">使用 GitHub 登录</span>
     </a>
@@ -20,11 +21,12 @@ global $_G;
 {eval
 function tpl_global_oauth_usernv_extra() {
 global $_G;
+$referer=urlencode(urlencode($_SERVER['HTTP_REFERER']??$_SERVER['REQUEST_URI']));
 }
 <!--{block return}-->
 <div style="margin-right: 10px; padding-right: 10px;display: flex">
     <a style="height:20px;padding: 2px;border-radius:5px;line-height:20px;border:1px solid #9c9c9c;display: block;text-decoration: none;cursor: pointer;"
-       href="https://github.com/login/oauth/authorize?client_id={$_G['cache']['plugin']['codfrm_oauth2']['github_oauth_client_id']}&redirect_uri={$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind%26p=github%26op=redirect&response_type=code&scope=read:user,user:email">
+       href="https://github.com/login/oauth/authorize?client_id={$_G['cache']['plugin']['codfrm_oauth2']['github_oauth_client_id']}&redirect_uri={$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind%26p=github%26op=redirect%26referer={$referer}&response_type=code&scope=read:user,user:email">
         <img style="height: 100%;" src="{$_G['siteurl']}source/plugin/codfrm_oauth2/image/github.png"/>
         <span style="float: right">使用 GitHub 登录</span>
     </a>
@@ -35,3 +37,4 @@ global $_G;
 }
 
 }
+
