@@ -9,3 +9,8 @@ function generateRandomString($length = 10)
     }
     return $randomString;
 }
+
+function isPost()
+{
+    return strtoupper($_SERVER['REQUEST_METHOD']) == 'POST';
+}

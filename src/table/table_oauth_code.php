@@ -16,7 +16,7 @@ class table_oauth_code extends discuz_table
         parent::__construct();
     }
 
-
+    //TODO:计划清理到期code
     public function fetchByCode($code)
     {
         return DB::fetch_first('select * from %t where code=%s', array($this->_table, $code));
@@ -31,6 +31,16 @@ class table_oauth_code extends discuz_table
             'scope' => $scope,
             'createtime' => time()
         ));
+    }
+
+    public function deleteByCode($code)
+    {
+        return C::t('#codfrm_oauth2#oauth_code')->delete($code);
+    }
+
+    public function cleandue(number $time)
+    {
+        return DB::delete($this->_table, "createtime<$time");
     }
 
 }

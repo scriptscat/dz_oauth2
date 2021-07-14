@@ -32,9 +32,10 @@ CREATE TABLE IF NOT EXISTS `pre_coauth_code` (
 CREATE TABLE IF NOT EXISTS `pre_coauth_access_token` (
   `access_token` varchar(128) CHARACTER SET latin1 NOT NULL,
   `uid` int(11) NOT NULL,
+  `client_id` int(11) NOT NULL,
   `scope` varchar(255) CHARACTER SET latin1 NOT NULL,
   `createtime` bigint(20) NOT NULL,
-  PRIMARY KEY (`access_token`)
+  PRIMARY KEY (`access_token`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `pre_coauth_record` (
