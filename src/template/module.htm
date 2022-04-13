@@ -1,7 +1,7 @@
 {eval
 function tpl_global_oauth_login_extra() {
 global $_G;
-$referer=urlencode(urlencode($_SERVER['HTTP_REFERER']??$_SERVER['REQUEST_URI']));
+$referer=urlencode(urlencode($_SERVER['REQUEST_URI']));
 }
 <!--{block return}-->
 <div class="y" style="margin: 0 4px; padding-right: 10px">
