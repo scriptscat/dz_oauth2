@@ -30,7 +30,7 @@ class plugin_codfrm_oauth2
     }
 }
 
-class  plugin_codfrm_oauth2_member extends plugin_codfrm_oauth2
+class plugin_codfrm_oauth2_member extends plugin_codfrm_oauth2
 {
 
     public function logging_input()
@@ -38,5 +38,13 @@ class  plugin_codfrm_oauth2_member extends plugin_codfrm_oauth2
         global $_G;
 
         return tpl_global_oauth_usernv_extra();
+    }
+}
+
+class plugin_codfrm_oauth2_forum extends plugin_codfrm_oauth2
+{
+    public function viewthread_postfooter()
+    {
+        return ['abb'];
     }
 }

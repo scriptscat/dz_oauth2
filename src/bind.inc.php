@@ -1,16 +1,13 @@
 <?php
 
-
-/**
- * 重定向判断
- */
-
 if (!defined('IN_DISCUZ')) {
     exit('Access Denied');
 }
 
 require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/table/table_oauth_github.php';
+require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/table/table_oauth_scriptcat.php';
 require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/lib/github.php';
+require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/lib/scriptcat.php';
 require_once DISCUZ_ROOT . '/source/function/function_member.php';
 require_once DISCUZ_ROOT . '/source/class/class_member.php';
 
@@ -19,133 +16,299 @@ $setting = $_G['cache']['plugin']['codfrm_oauth2'];
 
 switch ($_GET['op']) {
     case 'redirect':
-        switch ($_GET['p']) {
-            case 'github':
-                if (!$setting['github_oauth_client_id']) {
-                    return showmessage('当前站点暂未设置GitHub登录方式', dreferer(), [], ['alert' => 'error', 'refreshtime' => 3, 'referer' => rawurlencode(dreferer())]);
-                }
-                github();
-                break;
-            default:
-                return showmessage('错误的请求', dreferer(), [], ['alert' => 'error', 'refreshtime' => 3, 'referer' => rawurlencode(dreferer())]);
-        }
+        handleRedirect();
         break;
     case 'bind':
-        if ($_G['uid']) {
-            return showmessage('登录成功', $_G['siteurl'], [], ['alert' => 'right', 'refreshtime' => 3]);
-        }
-        session_start();
-        $resp = githubUser($_SESSION['oauth_github_at']);
-        if (!$resp) {
-            return showmessage('系统网络错误,请反馈给网站管理员', dreferer(), [], ['alert' => 'error', 'refreshtime' => 5, 'referer' => rawurlencode(dreferer())]);
-        }
-        if (!$resp['login']) {
-            return showmessage('错误:{describe}', dreferer(), ['describe' => $resp['describe']], ['alert' => 'error', 'refreshtime' => 5, 'referer' => rawurlencode(dreferer())]);
-        }
-
-        require_once template("codfrm_oauth2:bind", $resp);
+        handleBind();
         break;
     case 'register':
         register();
         break;
     case 'bind2':
-
-        $resp = getGithubUserInfo();
-        $_G['github_login_id'] = $resp['id'];
-        $_G['github_login_name'] = $resp['name'] ?? $resp['login'];
-
-        $ctl_obj = new logging_ctl();
-        $_G['setting']['seccodestatus'] = 0;
-
-        $ctl_obj->extrafile = DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/lib/bind.php';
-        $ctl_obj->template = 'member/login';
-        $ctl_obj->on_login();
-
+        handleBind2();
         break;
     case 'bind3':
-        if (!$_G['uid']) {
-            return showmessage('账号未登录', $_G['siteurl'], [], ['alert' => 'right', 'refreshtime' => 3]);
-        }
-        $resp = fetchGithub($_GET['code']);
-        $table = new table_oauth_github();
-        $raw = $table->fetchByGithub($resp['id']);
-        if ($raw) {
-            return showmessage('此GitHub已经绑定过其它的账号了', dreferer(), [], ['alert' => 'error', 'refreshtime' => 5, 'referer' => rawurlencode(dreferer())]);
-        }
-        C::t('#codfrm_oauth2#oauth_github')->insert(array(
-            'uid' => $_G['uid'],
-            'openid' => $resp['id'],
-            'name' => $resp['name'] ?? $resp['login'],
-            'createtime' => time()
-        ));
-        return showmessage('绑定成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', [], ['alert' => 'right', 'refreshtime' => 3]);
+        handleBind3();
+        break;
     case 'unbind':
-        if (!$_G['uid']) {
-            return showmessage('账号未登录', $_G['siteurl'], [], ['alert' => 'right', 'refreshtime' => 3]);
-        }
-        $table = new table_oauth_github();
-        $raw = $table->fetchByUid($_G['uid']);
-        if (!$raw) {
-            return showmessage('没有绑定GitHub账号', dreferer(), [], ['alert' => 'error', 'refreshtime' => 5, 'referer' => rawurlencode(dreferer())]);
-        }
-        if (time() < $raw['createtime'] + 86400 * 60) {
-            return showmessage('绑定60天后才能解除绑定', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', [], ['alert' => 'error', 'refreshtime' => 3]);
-        }
-        C::t('#codfrm_oauth2#oauth_github')->delete($raw['id']);
-        return showmessage('解绑成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', [], ['alert' => 'right', 'refreshtime' => 3]);
+        handleUnbind();
+        break;
     default:
-        return showmessage('错误的操作', dreferer(), [], ['alert' => 'error', 'refreshtime' => 3, 'referer' => rawurlencode(dreferer())]);
+        showError('错误的操作');
+}
+
+function handleRedirect()
+{
+    global $_GET;
+    switch ($_GET['p']) {
+        case 'github':
+            handleGithubRedirect();
+            break;
+        default:
+            showError('错误的请求');
+    }
+}
+
+function handleBind()
+{
+    global $_G;
+
+    if ($_G['uid']) {
+        showMessage('登录成功', $_G['siteurl'], 'right', 3);
+    }
+
+    session_start();
+    $resp = githubUser($_SESSION['oauth_github_at']);
+
+    if (!$resp) {
+        showError('系统网络错误,请反馈给网站管理员', 5);
+    }
+
+    if (!$resp['login']) {
+        showError("错误:{describe}", 5, ['describe' => $resp['describe']]);
+    }
+
+    require_once template("codfrm_oauth2:bind", $resp);
+}
+
+function handleBind2()
+{
+    global $_G;
+
+    $resp = getGithubUserInfo();
+    $_G['github_login_id'] = $resp['id'];
+    $_G['github_login_name'] = $resp['name'] ?? $resp['login'];
+
+    $ctl_obj = new logging_ctl();
+    $_G['setting']['seccodestatus'] = 0;
+
+    $ctl_obj->extrafile = DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/lib/bind.php';
+    $ctl_obj->template = 'member/login';
+    $ctl_obj->on_login();
+}
+
+function handleBind3()
+{
+    global $_G;
+
+    if (!$_G['uid']) {
+        showMessage('账号未登录', $_G['siteurl'], 'right', 3);
+    }
+
+    switch ($_G['p']) {
+        case "github":
+            handleGithubBind3();
+            break;
+        case "scriptcat":
+            handleScriptcatBind3();
+    }
+}
+
+function handleScriptcatBind3()
+{
+    global $_G;
+
+    $table = new table_oauth_scriptcat();
+    $raw = $table->fetchByUid($_G['uid']);
+    if ($raw) {
+        showError('已绑定脚本猫的工具箱账号', 5);
+        return;
+    }
+
+    $resp = fetchScriptcat($_GET['code']);
+    if (!$resp) {
+        showError('系统网络错误,请反馈给网站管理员', 5);
+    }
+
+    $raw = $table->fetchByScriptcat($resp['user_id']);
+    if ($raw) {
+        showError('此脚本猫账号已经绑定过其它的账号了', 5);
+    }
+
+
+    $table->insert([
+        'uid' => $_G['uid'],
+        'openid' => $resp['user_id'],
+        'name' => $resp['username'],
+        'createtime' => time(),
+    ]);
+
+    showMessage('绑定成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
+
+}
+
+function fetchScriptcat($code)
+{
+    global $_G;
+    $setting = $_G['cache']['plugin']['codfrm_oauth2'];
+
+    if (!$code) {
+        showError('错误请求', 3);
+    }
+
+    $sc = new ScriptCat($setting['scriptcat_oauth_client_id'], $setting['scriptcat_oauth_secret']);
+    $resp = $sc->accessToken($code);
+    if (!$resp) {
+        showError('系统网络错误,请反馈给网站管理员', 5);
+    }
+
+    if (!$resp['access_token']) {
+        showError('系统错误,请反馈给网站管理员:{message}', 5, ['message' => $resp['error_description']]);
+    }
+
+    session_start();
+    $_SESSION['oauth_github_at'] = $resp['access_token'];
+    $resp = $sc->userinfo($resp['access_token']);
+
+    if (!$resp) {
+        showError('系统网络错误,请反馈给网站管理员', 5);
+    }
+
+    if ($resp['code'] !== 0) {
+        showError('错误:{describe}', 5, ['describe' => $resp['msg']]);
+    }
+
+    return $resp;
+}
+
+function handleGithubBind3()
+{
+    global $_G, $_GET;
+    $table = new table_oauth_github();
+    $raw = $table->fetchByUid($_G['uid']);
+    if ($raw) {
+        showError('此账号已经绑定过GitHub了', 5);
+    }
+
+    $resp = fetchGithub($_GET['code']);
+    if (!$resp) {
+        showError('系统网络错误,请反馈给网站管理员', 5);
+    }
+    $raw = $table->fetchByGithub($resp['id']);
+
+    if ($raw) {
+        showError('此GitHub已经绑定过其它的账号了', 5);
+    }
+
+    C::t('#codfrm_oauth2#oauth_github')->insert(array(
+        'uid' => $_G['uid'],
+        'openid' => $resp['id'],
+        'name' => $resp['name'] ?? $resp['login'],
+        'createtime' => time()
+    ));
+
+    showMessage('绑定成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
+}
+
+function handleUnbind()
+{
+    global $_G;
+
+    if (!$_G['uid']) {
+        showMessage('账号未登录', $_G['siteurl'], 'right', 3);
+    }
+
+    $table = new table_oauth_github();
+    $raw = $table->fetchByUid($_G['uid']);
+
+    if (!$raw) {
+        showError('没有绑定GitHub账号', 5);
+    }
+
+    if (time() < $raw['createtime'] + 86400 * 60) {
+        showMessage('绑定60天后才能解除绑定', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'error', 3);
+    }
+
+    C::t('#codfrm_oauth2#oauth_github')->delete($raw['id']);
+    showMessage('解绑成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
+}
+
+function handleGithubRedirect()
+{
+    global $setting;
+
+    if (!$setting['github_oauth_client_id']) {
+        showError('当前站点暂未设置GitHub登录方式', 3);
+    }
+
+    github();
+}
+
+function showError($msg, $refreshtime = 3, $extra = [])
+{
+    global $_G;
+
+    return showmessage($msg, dreferer(), $extra, [
+        'alert' => 'error',
+        'refreshtime' => $refreshtime,
+        'referer' => rawurlencode(dreferer())
+    ]);
+}
+
+function showMessage($msg, $url, $alert = 'right', $refreshtime = 3)
+{
+    return showmessage($msg, $url, [], [
+        'alert' => $alert,
+        'refreshtime' => $refreshtime
+    ]);
 }
 
 function fetchGithub($code)
 {
     global $_G;
     $setting = $_G['cache']['plugin']['codfrm_oauth2'];
+
     if (!$code) {
-        return showmessage('错误请求', dreferer(), [], ['alert' => 'error', 'refreshtime' => 3, 'referer' => rawurlencode(dreferer())]);
+        showError('错误请求', 3);
     }
+
     $resp = githubAccessToken($setting['github_oauth_client_id'], $setting['github_oauth_secret'], $code);
+
     if (!$resp) {
-        return showmessage('系统网络错误,请反馈给网站管理员', dreferer(), [], ['alert' => 'error', 'refreshtime' => 5, 'referer' => rawurlencode(dreferer())]);
+        showError('系统网络错误,请反馈给网站管理员', 5);
     }
+
     if (!$resp['access_token']) {
-        return showmessage(('系统错误,请反馈给网站管理员:{message}'), dreferer(), ['message' => $resp['error_description']], ['alert' => 'error', 'refreshtime' => 5, 'referer' => rawurlencode(dreferer())]);
+        showError('系统错误,请反馈给网站管理员:{message}', 5, ['message' => $resp['error_description']]);
     }
-    //NOTE: 直接存的session,以后优化吧
+
     session_start();
     $_SESSION['oauth_github_at'] = $resp['access_token'];
     $resp = githubUser($resp['access_token']);
+
     if (!$resp) {
-        return showmessage('系统网络错误,请反馈给网站管理员', dreferer(), [], ['alert' => 'error', 'refreshtime' => 5, 'referer' => rawurlencode(dreferer())]);
+        showError('系统网络错误,请反馈给网站管理员', 5);
     }
+
     if (!$resp['login']) {
-        return showmessage('错误:{describe}', dreferer(), ['describe' => $resp['describe']], ['alert' => 'error', 'refreshtime' => 5, 'referer' => rawurlencode(dreferer())]);
+        showError('错误:{describe}', 5, ['describe' => $resp['describe']]);
     }
+
     return $resp;
 }
 
 function github()
 {
     global $_G;
+
     $resp = fetchGithub($_GET['code']);
     $table = new table_oauth_github();
     $raw = $table->fetchByGithub($resp['id']);
+
     if (!$raw) {
-        //去注册
         dheader('Location:' . ($_G['siteurl'] . 'plugin.php?id=codfrm_oauth2:bind&op=bind'));
     } else {
-        // 去登录
         require_once libfile('function/member');
         require_once libfile('function/core');
 
         if (!($member = getuserbyuid($raw['uid'], 1))) {
-            return showmessage('用户不存在', dreferer(), [], ['alert' => 'error', 'refreshtime' => 5, 'referer' => rawurlencode(dreferer())]);
+            showError('用户不存在', 5);
         }
 
         $cookietime = 1296000;
         setloginstatus($member, $cookietime);
 
-        return showmessage('登录成功,3秒后跳转', $_GET['referer'] ?? dreferer(), [], ['alert' => 'right', 'refreshtime' => 3, 'referer' => rawurlencode($_GET['referer'] ?? dreferer())]);
+        showMessage('登录成功,3秒后跳转', $_GET['referer'] ?? dreferer());
     }
 }
 
@@ -153,12 +316,15 @@ function getGithubUserInfo()
 {
     session_start();
     $resp = githubUser($_SESSION['oauth_github_at']);
+
     if (!$resp) {
-        return showmessage('系统网络错误,请反馈给网站管理员', dreferer(), [], ['alert' => 'error', 'refreshtime' => 5, 'msgtype' => 3, 'referer' => rawurlencode(dreferer())]);
+        showError('系统网络错误,请反馈给网站管理员', 5);
     }
+
     if (!$resp['login']) {
-        return showmessage('错误:{describe}', dreferer(), ['describe' => $resp['describe']], ['alert' => 'error', 'refreshtime' => 5, 'msgtype' => 3, 'referer' => rawurlencode(dreferer())]);
+        showError('错误:{describe}', 5, ['describe' => $resp['describe']]);
     }
+
     return $resp;
 }
 
@@ -172,10 +338,10 @@ function register()
 
     $table = new table_oauth_github();
     $raw = $table->fetchByGithub($resp['id']);
-    if ($raw) {
-        return showmessage('已经绑定账号了，请重新登录', dreferer(), ['describe' => $resp['describe']], ['alert' => 'error', 'refreshtime' => 5, 'msgtype' => 3, 'referer' => rawurlencode(dreferer())]);
-    }
 
+    if ($raw) {
+        showError('已经绑定账号了，请重新登录', 5);
+    }
 
     $ctl_obj = new register_ctl();
     $setting = $_G['setting'];
@@ -187,7 +353,6 @@ function register()
     ];
     $ctl_obj->setting = $setting;
 
-
     $_G['setting']['seccodedata']['rule']['register']['allow'] = 3;
     $_G['setting']['secqaa']['status'] = 0;
 
@@ -195,8 +360,7 @@ function register()
     $ctl_obj->setting['checkuinlimit'] = 1;
     $ctl_obj->setting['strongpw'] = 0;
     $ctl_obj->setting['pwlength'] = 0;
-    $ctl_obj->extrafile = DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/lib/bing.php';
+    $ctl_obj->extrafile = DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/lib/bind.php';
     $ctl_obj->template = 'member/register';
     $ctl_obj->on_register();
-
 }

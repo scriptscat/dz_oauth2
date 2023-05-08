@@ -2,9 +2,19 @@
     <div>
         <span>GitHub:</span>
         <!--{if !$github}-->
-        <a href="https://github.com/login/oauth/authorize?client_id={$_G['cache']['plugin']['codfrm_oauth2']['github_oauth_client_id']}&redirect_uri={$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind%26p=github%26op=bind3&response_type=code&scope=read:user,user:email">点击绑定</a>
+        <a
+                href="https://github.com/login/oauth/authorize?client_id={$_G['cache']['plugin']['codfrm_oauth2']['github_oauth_client_id']}&redirect_uri={$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind%26p=github%26op=bind3&response_type=code&scope=read:user,user:email">点击绑定</a>
         <!--{else}-->
-        <span>已与 {$github[name]} 绑定 <a href="{$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind&p=github&op=unbind">点击解除绑定</a></span>
+        <span>已与 {$github[name]} 绑定 <a
+                href="{$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind&p=github&op=unbind">点击解除绑定</a></span>
         <!--{/if}-->
+    </div>
+    <div>
+        <span>脚本猫的工具箱:</span>
+        <!--{if !$scriptcat}-->
+        <a href="">点击绑定</a>
+        <!--{else}-->
+        <span>已与 {$scriptcat[name]} 绑定 <a
+                href="{$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind&p=scriptcat&op=unbind">点击解除绑定</a></span>
     </div>
 </div>

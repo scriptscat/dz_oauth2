@@ -12,13 +12,16 @@ RUN apk update && \
     chmod 755 docker-entrypoint.sh && \
     docker-php-ext-install mysqli
 
+ENV DZ_URL https://gitee.com/Discuz/DiscuzX/attach_files/1345207/download
+
 ENV DZ_WWW_ROOT /var/www/html
 
+ADD ${DZ_URL} /tmp/discuz.zip
 RUN unzip /tmp/discuz.zip \
     && mv upload/* ${DZ_WWW_ROOT} \
     && cd ${DZ_WWW_ROOT} \
     && chmod a+w -R config data uc_server/data uc_client/data \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/Lib/apt/lists/*
 
 EXPOSE 80/tcp
 
