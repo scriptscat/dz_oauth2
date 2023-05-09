@@ -14,3 +14,22 @@ function isPost()
 {
     return strtoupper($_SERVER['REQUEST_METHOD']) == 'POST';
 }
+
+
+function showError($msg, $refreshtime = 3, $extra = [])
+{
+    return showmessage($msg, dreferer(), $extra, [
+        'alert' => 'error',
+        'refreshtime' => $refreshtime,
+        'referer' => rawurlencode(dreferer())
+    ]);
+}
+
+function openMessage($msg, $url, $alert = 'right', $refreshtime = 3)
+{
+    return showmessage($msg, $url, [], [
+        'alert' => $alert,
+        'refreshtime' => $refreshtime
+    ]);
+}
+

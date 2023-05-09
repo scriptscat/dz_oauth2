@@ -36,8 +36,10 @@ CREATE TABLE IF NOT EXISTS `pre_pushcat_subscribe` (
   `status` int(11) NOT NULL,
   `createtime` bigint(20) NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `uid_tid` (`uid`,`tid`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+  UNIQUE KEY `uid_tid` (`uid`,`tid`) USING BTREE,
+  KEY `tid` (`tid`),
+  KEY `uid` (`uid`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 EOF;
 

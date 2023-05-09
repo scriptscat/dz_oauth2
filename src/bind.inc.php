@@ -4,10 +4,15 @@ if (!defined('IN_DISCUZ')) {
     exit('Access Denied');
 }
 
+// 输出错误
+ini_set('display_errors', 'on');
+error_reporting(E_ALL);
+
 require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/table/table_oauth_github.php';
 require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/table/table_oauth_scriptcat.php';
 require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/lib/github.php';
 require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/lib/scriptcat.php';
+require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/lib/utils.php';
 require_once DISCUZ_ROOT . '/source/function/function_member.php';
 require_once DISCUZ_ROOT . '/source/class/class_member.php';
 
@@ -54,7 +59,7 @@ function handleBind()
     global $_G;
 
     if ($_G['uid']) {
-        showMessage('登录成功', $_G['siteurl'], 'right', 3);
+        openMessage('登录成功', $_G['siteurl'], 'right', 3);
     }
 
     session_start();
@@ -92,10 +97,10 @@ function handleBind3()
     global $_G;
 
     if (!$_G['uid']) {
-        showMessage('账号未登录', $_G['siteurl'], 'right', 3);
+        openMessage('账号未登录', $_G['siteurl']);
     }
 
-    switch ($_G['p']) {
+    switch ($_GET['p']) {
         case "github":
             handleGithubBind3();
             break;
@@ -120,7 +125,7 @@ function handleScriptcatBind3()
         showError('系统网络错误,请反馈给网站管理员', 5);
     }
 
-    $raw = $table->fetchByScriptcat($resp['user_id']);
+    $raw = $table->fetchByScriptcat($resp['data']['user_id']);
     if ($raw) {
         showError('此脚本猫账号已经绑定过其它的账号了', 5);
     }
@@ -128,12 +133,12 @@ function handleScriptcatBind3()
 
     $table->insert([
         'uid' => $_G['uid'],
-        'openid' => $resp['user_id'],
-        'name' => $resp['username'],
+        'openid' => $resp['data']['user_id'],
+        'name' => $resp['data']['username'],
         'createtime' => time(),
     ]);
 
-    showMessage('绑定成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
+    openMessage('绑定成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
 
 }
 
@@ -146,8 +151,8 @@ function fetchScriptcat($code)
         showError('错误请求', 3);
     }
 
-    $sc = new ScriptCat($setting['scriptcat_oauth_client_id'], $setting['scriptcat_oauth_secret']);
-    $resp = $sc->accessToken($code);
+    $sc = new ScriptCat($setting['scriptcat_oauth_client_id'], $setting['scriptcat_oauth_client_secret']);
+    $resp = $sc->accessToken($code, 'bind3');
     if (!$resp) {
         showError('系统网络错误,请反馈给网站管理员', 5);
     }
@@ -197,7 +202,7 @@ function handleGithubBind3()
         'createtime' => time()
     ));
 
-    showMessage('绑定成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
+    openMessage('绑定成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
 }
 
 function handleUnbind()
@@ -205,22 +210,40 @@ function handleUnbind()
     global $_G;
 
     if (!$_G['uid']) {
-        showMessage('账号未登录', $_G['siteurl'], 'right', 3);
+        openMessage('账号未登录', $_G['siteurl'], 'right', 3);
     }
 
-    $table = new table_oauth_github();
-    $raw = $table->fetchByUid($_G['uid']);
 
-    if (!$raw) {
-        showError('没有绑定GitHub账号', 5);
+    switch ($_GET['p']) {
+        case "github":
+            $table = new table_oauth_github();
+            $raw = $table->fetchByUid($_G['uid']);
+
+            if (!$raw) {
+                showError('没有绑定GitHub账号', 5);
+            }
+
+            if (time() < $raw['createtime'] + 86400 * 60) {
+                openMessage('绑定60天后才能解除绑定', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'error', 3);
+            }
+
+            C::t('#codfrm_oauth2#oauth_github')->delete($raw['id']);
+            openMessage('解绑成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
+        case "scriptcat":
+            $table = new table_oauth_scriptcat();
+            $raw = $table->fetchByUid($_G['uid']);
+
+            if (!$raw) {
+                showError('没有绑定脚本猫账号', 5);
+            }
+
+            if (time() < $raw['createtime'] + 86400 * 60) {
+                openMessage('绑定60天后才能解除绑定', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'error', 3);
+            }
+
+            C::t('#codfrm_oauth2#oauth_scriptcat')->delete($raw['id']);
+            openMessage('解绑成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
     }
-
-    if (time() < $raw['createtime'] + 86400 * 60) {
-        showMessage('绑定60天后才能解除绑定', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'error', 3);
-    }
-
-    C::t('#codfrm_oauth2#oauth_github')->delete($raw['id']);
-    showMessage('解绑成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
 }
 
 function handleGithubRedirect()
@@ -232,25 +255,6 @@ function handleGithubRedirect()
     }
 
     github();
-}
-
-function showError($msg, $refreshtime = 3, $extra = [])
-{
-    global $_G;
-
-    return showmessage($msg, dreferer(), $extra, [
-        'alert' => 'error',
-        'refreshtime' => $refreshtime,
-        'referer' => rawurlencode(dreferer())
-    ]);
-}
-
-function showMessage($msg, $url, $alert = 'right', $refreshtime = 3)
-{
-    return showmessage($msg, $url, [], [
-        'alert' => $alert,
-        'refreshtime' => $refreshtime
-    ]);
 }
 
 function fetchGithub($code)
@@ -308,7 +312,7 @@ function github()
         $cookietime = 1296000;
         setloginstatus($member, $cookietime);
 
-        showMessage('登录成功,3秒后跳转', $_GET['referer'] ?? dreferer());
+        openMessage('登录成功,3秒后跳转', $_GET['referer'] ?? dreferer());
     }
 }
 

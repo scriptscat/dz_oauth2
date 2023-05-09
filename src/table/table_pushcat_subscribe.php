@@ -21,6 +21,25 @@ class table_pushcat_subscribe extends discuz_table
         return DB::fetch_first('select * from %t where uid=%s and tid=%s', array($this->_table, $uid, $tid));
     }
 
+    public function updateStatus($id, $status)
+    {
+        return DB::update($this->_table, array('status' => $status), array('id' => $id));
+    }
+
+    public function create($uid, $tid, $status)
+    {
+        return C::t('#codfrm_oauth2#pushcat_subscribe')->insert(array(
+            'uid' => $uid,
+            'tid' => $tid,
+            'status' => $status,
+            'createtime' => time()
+        ));
+    }
+
+    public function fetchByTid($tid)
+    {
+        return DB::fetch_all('select * from %t where tid=%s and status=1', array($this->_table, $tid));
+    }
 
 }
 

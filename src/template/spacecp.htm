@@ -9,12 +9,15 @@
                 href="{$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind&p=github&op=unbind">点击解除绑定</a></span>
         <!--{/if}-->
     </div>
-    <div>
+    <div style="margin-top: 8px">
         <span>脚本猫的工具箱:</span>
         <!--{if !$scriptcat}-->
-        <a href="">点击绑定</a>
+        <a href="https://sct.icodef.com/api/v1/oauth2/authorize?client_id={$_G['cache']['plugin']['codfrm_oauth2']['scriptcat_oauth_client_id']}&response_type=code&redirect_uri={$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind%26p=scriptcat%26op=bind3&scope=user">点击绑定</a>
         <!--{else}-->
         <span>已与 {$scriptcat[name]} 绑定 <a
                 href="{$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind&p=scriptcat&op=unbind">点击解除绑定</a></span>
+        <!--{/if}-->
+        <br>
+        <span>当你绑定脚本猫的工具箱后,你可以通过其中的推送功能接收论坛通知</span>
     </div>
 </div>

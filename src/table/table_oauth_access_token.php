@@ -11,7 +11,7 @@ class table_oauth_access_token extends discuz_table
 
         $this->_table = 'coauth_access_token';
         $this->_pk = 'access_token';
-        $this->_pre_cache_key = 'coauth_client_';
+        $this->_pre_cache_key = 'coauth_access_token';
 
         parent::__construct();
     }
