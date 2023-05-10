@@ -26,12 +26,12 @@ class table_pushcat_subscribe extends discuz_table
         return DB::update($this->_table, array('status' => $status), array('id' => $id));
     }
 
-    public function create($uid, $tid, $status)
+    public function create($uid, $tid)
     {
         return C::t('#codfrm_oauth2#pushcat_subscribe')->insert(array(
             'uid' => $uid,
             'tid' => $tid,
-            'status' => $status,
+            'status' => 1,
             'createtime' => time()
         ));
     }

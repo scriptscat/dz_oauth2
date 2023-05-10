@@ -38,7 +38,7 @@ function handleSubscribe()
         $table->updateStatus($raw['id'], 1);
         openMessage('订阅成功', dreferer());
     }
-    $table->create($_G['uid'], $tid, 1);
+    $table->create($_G['uid'], $tid);
     openMessage('订阅成功', dreferer());
 }
 

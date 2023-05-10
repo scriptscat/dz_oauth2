@@ -69,14 +69,30 @@ class plugin_codfrm_oauth2_forum extends plugin_codfrm_oauth2
     public function post_middle()
     {
         // 非post直接返回
-//        if($_SERVER['REQUEST_METHOD'] != 'POST') {
-//            return;
-//        }
-        // 查询出订阅用户
+        // reply newthread
+        if ($_SERVER['REQUEST_METHOD'] != 'POST') {
+            return;
+        }
+
         global $_G;
         $setting = $_G['cache']['plugin']['codfrm_oauth2'];
         if (!$setting['scriptcat_oauth_client_id']) {
             return;
+        }
+
+        // 查询出订阅用户
+//        $userIds = [];
+        $title = "";
+        $content = "";
+        switch ($_GET['action']) {
+            case "reply":
+                // 查询帖子标题
+                $title = $_G['forum_thread']['subject'] . "有新的回复";
+                $url = $_G['siteurl'] . '/forum.php?mod=viewthread&tid=' . $_G['tid'] . '&extra=';
+                $content = "您发布在$_G[bbname]的帖子有新回复，[点我查看](" . $url . ") 链接: " . $url;
+                break;
+            default:
+                return;
         }
 
         $table = new table_pushcat_subscribe();
@@ -90,11 +106,43 @@ class plugin_codfrm_oauth2_forum extends plugin_codfrm_oauth2
                 $userIds[] = $scriptcat['openid'];
             }
         }
-        $scriptcat = new ScriptCat(
-            $setting['scriptcat_oauth_client_id'], $setting['scriptcat_oauth_client_secret'],
-            "http://192.168.104.123:8080");
-
-        $scriptcat->send($userIds, $_POST['subject'], $_POST['message']);
-
+        if ($userIds == []) {
+            return;
+        }
+        try {
+            $scriptcat = new ScriptCat(
+                $setting['scriptcat_oauth_client_id'], $setting['scriptcat_oauth_client_secret']);
+            $scriptcat->send($userIds, $title, $content, ['url' =>
+                $_G['siteurl'] . '/forum.php?mod=viewthread&tid=' . $_G['tid'] . '&extra=']);
+        } catch (Exception $e) {
+            // 屏蔽错误
+        }
     }
+
+    public function post_message($param)
+    {
+        var_dump($param);
+        global $_G;
+        try {
+            // 判断自己有没有绑定脚本猫的工具箱
+            if ($param['param'][0] == "post_newthread_succeed") {
+                $table = new table_oauth_scriptcat();
+                $scriptcat = $table->fetchByUid($_G['uid']);
+                if (!$scriptcat) {
+                    return;
+                }
+                // 有的话绑定
+                $table = new table_pushcat_subscribe();
+                $table->create($_G['uid'], $param['param'][2]['tid']);
+            }
+        } catch (Exception $e) {
+            // 屏蔽错误
+        }
+    }
+}
+
+
+class mobileplugin_codfrm_oauth2_forum extends plugin_codfrm_oauth2_forum
+{
+
 }

@@ -1,84 +1,102 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <root>
-    <item id="Title"><![CDATA[Discuz! Plugin]]></item>
-    <item id="Version"><![CDATA[X3.5]]></item>
-    <item id="Time"><![CDATA[2021-07-10 18:08]]></item>
-    <item id="From"><![CDATA[Discuz! Board (http://127.0.0.1/)]]></item>
-    <item id="Data">
-        <item id="plugin">
-            <item id="available"><![CDATA[1]]></item>
-            <item id="adminid"><![CDATA[1]]></item>
-            <item id="name"><![CDATA[oauth2 - 王一之]]></item>
-            <item id="identifier"><![CDATA[codfrm_oauth2]]></item>
-            <item id="description"><![CDATA[github 登录,oauth2.0 server]]></item>
-            <item id="datatables"><![CDATA[]]></item>
-            <item id="directory"><![CDATA[codfrm_oauth2/]]></item>
-            <item id="copyright"><![CDATA[blog.icodef.com]]></item>
-            <item id="version"><![CDATA[1.1.0]]></item>
-            <item id="__modules">
-                <item id="0">
-                    <item id="name"><![CDATA[client]]></item>
-                    <item id="param"><![CDATA[]]></item>
-                    <item id="menu"><![CDATA[]]></item>
-                    <item id="url"><![CDATA[]]></item>
-                    <item id="type"><![CDATA[11]]></item>
-                    <item id="adminid"><![CDATA[0]]></item>
-                    <item id="displayorder"><![CDATA[0]]></item>
-                    <item id="navtitle"><![CDATA[]]></item>
-                    <item id="navicon"><![CDATA[]]></item>
-                    <item id="navsubname"><![CDATA[]]></item>
-                    <item id="navsuburl"><![CDATA[]]></item>
-                </item>
-                <item id="1">
-                    <item id="name"><![CDATA[client]]></item>
-                    <item id="param"><![CDATA[]]></item>
-                    <item id="menu"><![CDATA[]]></item>
-                    <item id="url"><![CDATA[]]></item>
-                    <item id="type"><![CDATA[28]]></item>
-                    <item id="adminid"><![CDATA[0]]></item>
-                    <item id="displayorder"><![CDATA[0]]></item>
-                    <item id="navtitle"><![CDATA[]]></item>
-                    <item id="navicon"><![CDATA[]]></item>
-                    <item id="navsubname"><![CDATA[]]></item>
-                    <item id="navsuburl"><![CDATA[]]></item>
-                </item>
-                <item id="2">
-                    <item id="name"><![CDATA[spacecp]]></item>
-                    <item id="param"><![CDATA[]]></item>
-                    <item id="menu"><![CDATA[三方账号绑定]]></item>
-                    <item id="url"><![CDATA[]]></item>
-                    <item id="type"><![CDATA[7]]></item>
-                    <item id="adminid"><![CDATA[0]]></item>
-                    <item id="displayorder"><![CDATA[0]]></item>
-                    <item id="navtitle"><![CDATA[]]></item>
-                    <item id="navicon"><![CDATA[]]></item>
-                    <item id="navsubname"><![CDATA[]]></item>
-                    <item id="navsuburl"><![CDATA[]]></item>
-                </item>
-            </item>
-        </item>
-        <item id="version"><![CDATA[X3.5]]></item>
-        <item id="var">
-            <item id="0">
-                <item id="displayorder"><![CDATA[0]]></item>
-                <item id="title"><![CDATA[github oauth client_id]]></item>
-                <item id="description"><![CDATA[]]></item>
-                <item id="variable"><![CDATA[github_oauth_client_id]]></item>
-                <item id="type"><![CDATA[text]]></item>
-                <item id="value"><![CDATA[]]></item>
-                <item id="extra"><![CDATA[]]></item>
-            </item>
-            <item id="1">
-                <item id="displayorder"><![CDATA[0]]></item>
-                <item id="title"><![CDATA[github oauth secret]]></item>
-                <item id="description"><![CDATA[]]></item>
-                <item id="variable"><![CDATA[github_oauth_secret]]></item>
-                <item id="type"><![CDATA[text]]></item>
-                <item id="value"><![CDATA[]]></item>
-                <item id="extra"><![CDATA[]]></item>
-            </item>
-        </item>
-        <item id="installfile"><![CDATA[install.php]]></item>
-        <item id="upgradefile"><![CDATA[upgrade.php]]></item>
-    </item>
+	<item id="Title"><![CDATA[Discuz! Plugin]]></item>
+	<item id="Version"><![CDATA[X3.5]]></item>
+	<item id="Time"><![CDATA[2023-05-11 00:43]]></item>
+	<item id="From"><![CDATA[Discuz! Board (http://localhost/)]]></item>
+	<item id="Data">
+		<item id="plugin">
+			<item id="available"><![CDATA[1]]></item>
+			<item id="adminid"><![CDATA[1]]></item>
+			<item id="name"><![CDATA[oauth2 - 王一之]]></item>
+			<item id="identifier"><![CDATA[codfrm_oauth2]]></item>
+			<item id="description"><![CDATA[github 登录,oauth2.0 server]]></item>
+			<item id="datatables"><![CDATA[]]></item>
+			<item id="directory"><![CDATA[codfrm_oauth2/]]></item>
+			<item id="copyright"><![CDATA[blog.icodef.com]]></item>
+			<item id="version"><![CDATA[1.1.0]]></item>
+			<item id="__modules">
+				<item id="0">
+					<item id="name"><![CDATA[client]]></item>
+					<item id="param"><![CDATA[]]></item>
+					<item id="menu"><![CDATA[]]></item>
+					<item id="url"><![CDATA[]]></item>
+					<item id="type"><![CDATA[11]]></item>
+					<item id="adminid"><![CDATA[0]]></item>
+					<item id="displayorder"><![CDATA[0]]></item>
+					<item id="navtitle"><![CDATA[]]></item>
+					<item id="navicon"><![CDATA[]]></item>
+					<item id="navsubname"><![CDATA[]]></item>
+					<item id="navsuburl"><![CDATA[]]></item>
+				</item>
+				<item id="1">
+					<item id="name"><![CDATA[client]]></item>
+					<item id="param"><![CDATA[]]></item>
+					<item id="menu"><![CDATA[]]></item>
+					<item id="url"><![CDATA[]]></item>
+					<item id="type"><![CDATA[28]]></item>
+					<item id="adminid"><![CDATA[0]]></item>
+					<item id="displayorder"><![CDATA[0]]></item>
+					<item id="navtitle"><![CDATA[]]></item>
+					<item id="navicon"><![CDATA[]]></item>
+					<item id="navsubname"><![CDATA[]]></item>
+					<item id="navsuburl"><![CDATA[]]></item>
+				</item>
+				<item id="2">
+					<item id="name"><![CDATA[spacecp]]></item>
+					<item id="param"><![CDATA[]]></item>
+					<item id="menu"><![CDATA[三方账号绑定]]></item>
+					<item id="url"><![CDATA[]]></item>
+					<item id="type"><![CDATA[7]]></item>
+					<item id="adminid"><![CDATA[0]]></item>
+					<item id="displayorder"><![CDATA[0]]></item>
+					<item id="navtitle"><![CDATA[]]></item>
+					<item id="navicon"><![CDATA[]]></item>
+					<item id="navsubname"><![CDATA[]]></item>
+					<item id="navsuburl"><![CDATA[]]></item>
+				</item>
+			</item>
+		</item>
+		<item id="version"><![CDATA[X3.5]]></item>
+		<item id="var">
+			<item id="0">
+				<item id="displayorder"><![CDATA[0]]></item>
+				<item id="title"><![CDATA[github oauth client_id]]></item>
+				<item id="description"><![CDATA[]]></item>
+				<item id="variable"><![CDATA[github_oauth_client_id]]></item>
+				<item id="type"><![CDATA[text]]></item>
+				<item id="value"><![CDATA[]]></item>
+				<item id="extra"><![CDATA[]]></item>
+			</item>
+			<item id="1">
+				<item id="displayorder"><![CDATA[0]]></item>
+				<item id="title"><![CDATA[github oauth secret]]></item>
+				<item id="description"><![CDATA[]]></item>
+				<item id="variable"><![CDATA[github_oauth_secret]]></item>
+				<item id="type"><![CDATA[text]]></item>
+				<item id="value"><![CDATA[]]></item>
+				<item id="extra"><![CDATA[]]></item>
+			</item>
+			<item id="2">
+				<item id="displayorder"><![CDATA[0]]></item>
+				<item id="title"><![CDATA[scriptcat client id]]></item>
+				<item id="description"><![CDATA[]]></item>
+				<item id="variable"><![CDATA[scriptcat_oauth_client_id]]></item>
+				<item id="type"><![CDATA[text]]></item>
+				<item id="value"><![CDATA[hyzlmkswluqiupmc]]></item>
+				<item id="extra"><![CDATA[]]></item>
+			</item>
+			<item id="3">
+				<item id="displayorder"><![CDATA[0]]></item>
+				<item id="title"><![CDATA[scriptcat oauth client secret]]></item>
+				<item id="description"><![CDATA[]]></item>
+				<item id="variable"><![CDATA[scriptcat_oauth_client_secret]]></item>
+				<item id="type"><![CDATA[text]]></item>
+				<item id="value"><![CDATA[uwweczbq50z6lpw9e5xja530yvajwmgo]]></item>
+				<item id="extra"><![CDATA[]]></item>
+			</item>
+		</item>
+		<item id="installfile"><![CDATA[install.php]]></item>
+		<item id="upgradefile"><![CDATA[upgrade.php]]></item>
+	</item>
 </root>

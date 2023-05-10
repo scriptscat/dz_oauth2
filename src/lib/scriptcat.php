@@ -68,10 +68,8 @@ class ScriptCat
     {
         global $_G;
         // 缓存
-        $cacheKey = "codfrm_oauth2:module:scriptcat_access_token";
+        $cacheKey = "scriptcat_access_token";
         $cache = loadcache($cacheKey);
-        var_dump($cache, $_G['cache'][$cacheKey]);
-        exit(0);
         if ($cache && $_G['cache'][$cacheKey]['time'] > time() - 3600) {
             return $_G['cache'][$cacheKey]['access_key'];
         }
@@ -109,7 +107,7 @@ class ScriptCat
         }
     }
 
-    public function send($userIds, $title, $content)
+    public function send($userIds, $title, $content, $parameters = [])
     {
         $accessToken = $this->getAccessToken();
         if (!$accessToken) {
@@ -123,18 +121,17 @@ class ScriptCat
             ],
             'title' => $title,
             'content' => $content,
+            'parameters' => $parameters,
         ];
         // 输出错误
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data, JSON_UNESCAPED_UNICODE));
         curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $response = curl_exec($ch);
         curl_close($ch);
-        var_dump($response);
-        exit(0);
         return $response;
     }
 }
