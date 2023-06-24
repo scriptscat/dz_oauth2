@@ -29,6 +29,12 @@ function handleSubscribe()
     if (!$tid) {
         showError('缺少参数');
     }
+    // 判断是否绑定了脚本猫的工具箱
+    $table = new table_oauth_scriptcat();
+    $raw = $table->fetchByUid($_G['uid']);
+    if (!$raw) {
+        showError('请先绑定脚本猫的工具箱，才能接收通知消息', 3, [], $_G['siteurl'] . "/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp");
+    }
     $table = new table_pushcat_subscribe();
     $raw = $table->fetchByUidTid($_G['uid'], $tid);
     if ($raw) {

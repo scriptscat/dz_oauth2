@@ -16,12 +16,11 @@ function isPost()
 }
 
 
-function showError($msg, $refreshtime = 3, $extra = [])
+function showError($msg, $refreshtime = 3, $extra = [], $referer = "")
 {
-    return showmessage($msg, dreferer(), $extra, [
+    return showmessage($msg, $referer ?? dreferer(), $extra, [
         'alert' => 'error',
         'refreshtime' => $refreshtime,
-        'referer' => rawurlencode(dreferer())
     ]);
 }
 

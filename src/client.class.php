@@ -80,8 +80,12 @@ class plugin_codfrm_oauth2_forum extends plugin_codfrm_oauth2
             return;
         }
 
+        if (empty($_POST["message"])) {
+            return;
+        }
+
         // 查询出订阅用户
-//        $userIds = [];
+        $userIds = [];
         $title = "";
         $content = "";
         switch ($_GET['action']) {
