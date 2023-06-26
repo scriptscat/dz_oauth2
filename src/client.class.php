@@ -66,7 +66,7 @@ class plugin_codfrm_oauth2_forum extends plugin_codfrm_oauth2
 </a>"];
     }
 
-    public function post_middle()
+    public function post_middle_output()
     {
         // 非post直接返回
         // reply newthread
@@ -80,7 +80,11 @@ class plugin_codfrm_oauth2_forum extends plugin_codfrm_oauth2
             return;
         }
 
-        if (empty($_POST["message"])) {
+        if (empty($_G["messageparam"])) {
+            return;
+        }
+
+        if ($_G["messageparam"][0] !== "post_reply_succeed") {
             return;
         }
 
@@ -92,8 +96,9 @@ class plugin_codfrm_oauth2_forum extends plugin_codfrm_oauth2
             case "reply":
                 // 查询帖子标题
                 $title = $_G['forum_thread']['subject'] . "有新的回复";
-                $url = $_G['siteurl'] . '/forum.php?mod=viewthread&tid=' . $_G['tid'] . '&extra=';
-                $content = "您发布在$_G[bbname]的帖子有新回复，[点我查看](" . $url . ") 链接: " . $url;
+                $url = $_G['siteurl'] . 'forum.php?mod=viewthread&tid=' . $_G['tid'] . '&extra=';
+                $content = "您发布在$_G[bbname]的帖子有新回复，[点我查看](" . $url . ") 链接: " . $url .
+                    ("\n$_POST[message]");
                 break;
             default:
                 return;
@@ -125,7 +130,6 @@ class plugin_codfrm_oauth2_forum extends plugin_codfrm_oauth2
 
     public function post_message($param)
     {
-        var_dump($param);
         global $_G;
         try {
             // 判断自己有没有绑定脚本猫的工具箱
