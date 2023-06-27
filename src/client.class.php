@@ -99,6 +99,11 @@ class plugin_codfrm_oauth2_forum extends plugin_codfrm_oauth2
                 $url = $_G['siteurl'] . 'forum.php?mod=viewthread&tid=' . $_G['tid'] . '&extra=';
                 $content = "您发布在$_G[bbname]的帖子有新回复，[点我查看](" . $url . ") 链接: " . $url .
                     ("\n$_POST[message]");
+                // 判断是否回复某人
+                if ($_POST["reppid"]) {
+                    // 通过pid查询回复的人
+                    $userIds[] = C::t('forum_post')->fetch('tid:' . $_GET['tid'], $_POST["reppid"], true)["authorid"];
+                }
                 break;
             default:
                 return;
@@ -108,20 +113,25 @@ class plugin_codfrm_oauth2_forum extends plugin_codfrm_oauth2
         $raws = $table->fetchByTid($_G['tid']);
         // 查询出scriptcat的user_id然后推送
         $table = new table_oauth_scriptcat();
-        $userIds = [];
+        $openIds = [];
         foreach ($raws as $raw) {
-            $scriptcat = $table->fetchByUid($raw['uid']);
+            $userIds[] = $raw['uid'];
+        }
+        // userId去重
+        $userIds = array_unique($userIds);
+        foreach ($userIds as $userId) {
+            $scriptcat = $table->fetchByUid($userId);
             if ($scriptcat) {
-                $userIds[] = $scriptcat['openid'];
+                $openIds[] = $scriptcat['openid'];
             }
         }
-        if ($userIds == []) {
+        if ($openIds == []) {
             return;
         }
         try {
             $scriptcat = new ScriptCat(
                 $setting['scriptcat_oauth_client_id'], $setting['scriptcat_oauth_client_secret']);
-            $scriptcat->send($userIds, $title, $content, ['url' =>
+            $scriptcat->send($openIds, $title, $content, ['url' =>
                 $_G['siteurl'] . '/forum.php?mod=viewthread&tid=' . $_G['tid'] . '&extra=']);
         } catch (Exception $e) {
             // 屏蔽错误
