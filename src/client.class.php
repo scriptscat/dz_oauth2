@@ -120,6 +120,10 @@ class plugin_codfrm_oauth2_forum extends plugin_codfrm_oauth2
         // userId去重
         $userIds = array_unique($userIds);
         foreach ($userIds as $userId) {
+            // 忽略发布人
+            if ($userId == $_G['uid']) {
+                continue;
+            }
             $scriptcat = $table->fetchByUid($userId);
             if ($scriptcat) {
                 $openIds[] = $scriptcat['openid'];
