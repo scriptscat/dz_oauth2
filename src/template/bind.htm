@@ -6,10 +6,10 @@
             <p class="welcome mbn cl" style="clear:both; width:100%; "><strong>Hi</strong>,<strong>{$resp[name]}</strong>,
                 <span class="xg2">欢迎使用GitHub帐号登录</span></p>
             <ul class="tb cl z">
-                <li id="connect_tab_1" $connect_tab_1><a id="loginlist" href="javascript:;"
+                <li id="connect_tab_1"><a id="loginlist" href="javascript:;"
                                                          onclick="_switch(1);this.blur();" tabindex="900">{lang
                     connect_register_profile}</a></li>
-                <li id="connect_tab_2" $connect_tab_2><a id="loginlist2" href="javascript:;"
+                <li id="connect_tab_2"><a id="loginlist2" href="javascript:;"
                                                          onclick="_switch(2);this.blur();" tabindex="900">{lang
                     connect_register_bind}</a></li>
             </ul>
@@ -215,7 +215,7 @@
                         <!--{/if}-->
                     </th>
                     <td><input type="text" name="username" id="username_$loginhash" autocomplete="off" size="36"
-                               class="txt" tabindex="1" value="$username"/></td>
+                               class="txt" tabindex="1" value="{echo dhtmlspecialchars($resp['login'])}"/></td>
                 </tr>
             </table>
         </div>

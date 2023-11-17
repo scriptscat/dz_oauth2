@@ -24,7 +24,7 @@ function showError($msg, $refreshtime = 3, $extra = [], $referer = "")
     ]);
 }
 
-function openMessage($msg, $url, $alert = 'right', $refreshtime = 3)
+function openMessage($msg, $url = '', $alert = 'right', $refreshtime = 3)
 {
     return showmessage($msg, $url, [], [
         'alert' => $alert,

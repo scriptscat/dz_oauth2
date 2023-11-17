@@ -72,7 +72,9 @@ function handleBind()
     if (!$resp['login']) {
         showError("错误:{describe}", 5, ['describe' => $resp['describe']]);
     }
-
+    if ($_G['member']) {
+        $_G['member']['freeze'] = '';
+    }
     require_once template("codfrm_oauth2:bind", $resp);
 }
 
@@ -304,14 +306,22 @@ function github()
     } else {
         require_once libfile('function/member');
         require_once libfile('function/core');
-
+        if ($_G['style']) {
+            $_G['style']['defaultextstyle'] = '';
+        }
+        if ($_G['setting']) {
+            $_G['setting']['shortcut'] = '';
+            $_G['setting']['showpatchnotice'] = 1;
+        }
+        if ($_G['cookie']) {
+            $_G['cookie']['ulastactivity'] = getglobal('cookie/ulastactivity');
+        }
         if (!($member = getuserbyuid($raw['uid'], 1))) {
             showError('用户不存在', 5);
         }
 
         $cookietime = 1296000;
         setloginstatus($member, $cookietime);
-
         openMessage('登录成功,3秒后跳转', $_GET['referer'] ?? dreferer());
     }
 }
