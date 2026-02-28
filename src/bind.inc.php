@@ -5,8 +5,8 @@ if (!defined('IN_DISCUZ')) {
 }
 
 // 输出错误
-ini_set('display_errors', 'on');
-error_reporting(E_ALL);
+//ini_set('display_errors', 'on');
+//error_reporting(E_ALL);
 
 require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/table/table_oauth_github.php';
 require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/table/table_oauth_scriptcat.php';
