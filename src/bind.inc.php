@@ -4,13 +4,7 @@ if (!defined('IN_DISCUZ')) {
     exit('Access Denied');
 }
 
-// 输出错误
-//ini_set('display_errors', 'on');
-//error_reporting(E_ALL);
-
-require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/table/table_oauth_github.php';
 require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/table/table_oauth_scriptcat.php';
-require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/lib/github.php';
 require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/lib/scriptcat.php';
 require_once DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/lib/utils.php';
 require_once DISCUZ_ROOT . '/source/function/function_member.php';
@@ -21,19 +15,10 @@ $setting = $_G['cache']['plugin']['codfrm_oauth2'];
 
 switch ($_GET['op']) {
     case 'redirect':
-        handleRedirect();
-        break;
-    case 'bind':
-        handleBind();
-        break;
-    case 'register':
-        register();
-        break;
-    case 'bind2':
-        handleBind2();
+        handleScriptcatRedirect();
         break;
     case 'bind3':
-        handleBind3();
+        handleScriptcatBind3();
         break;
     case 'unbind':
         handleUnbind();
@@ -42,59 +27,81 @@ switch ($_GET['op']) {
         showError('错误的操作');
 }
 
-function handleRedirect()
-{
-    global $_GET;
-    switch ($_GET['p']) {
-        case 'github':
-            handleGithubRedirect();
-            break;
-        default:
-            showError('错误的请求');
-    }
-}
-
-function handleBind()
+/**
+ * ScriptCat OAuth 登录流程
+ */
+function handleScriptcatRedirect()
 {
     global $_G;
+    $setting = $_G['cache']['plugin']['codfrm_oauth2'];
 
-    if ($_G['uid']) {
-        openMessage('登录成功', $_G['siteurl'], 'right', 3);
+    if (!$setting['scriptcat_oauth_client_id'] || !$setting['scriptcat_oauth_host']) {
+        showError('当前站点暂未设置 ScriptCat 登录', 3);
     }
 
-    session_start();
-    $resp = githubUser($_SESSION['oauth_github_at']);
-
-    if (!$resp) {
-        showError('系统网络错误,请反馈给网站管理员', 5);
+    $code = $_GET['code'] ?? '';
+    if (!$code) {
+        // 第一次访问: 重定向到 ScriptCat 授权页
+        $sc = newScriptCatClient();
+        $redirectUri = getScriptcatRedirectUri('redirect');
+        $referer = $_GET['referer'] ?? dreferer();
+        session_start();
+        $_SESSION['scriptcat_login_referer'] = $referer;
+        $authorizeUrl = $sc->authorizeUrl($redirectUri, 'openid');
+        dheader('Location: ' . $authorizeUrl);
+        return;
     }
 
-    if (!$resp['login']) {
-        showError("错误:{describe}", 5, ['describe' => $resp['describe']]);
+    // 回调: 带 code 参数，换取用户信息
+    $userinfo = fetchScriptcatUserInfo($code, 'redirect');
+    $scriptcatUid = $userinfo['uid'];
+    $username = $userinfo['username'];
+    $email = $userinfo['email'] ?? '';
+
+    // 1. 检查绑定表
+    $table = new table_oauth_scriptcat();
+    $binding = $table->fetchByScriptcat($scriptcatUid);
+
+    if ($binding) {
+        // 已绑定，直接登录
+        scriptcatAutoLogin($binding['uid']);
+        return;
     }
-    if ($_G['member']) {
-        $_G['member']['freeze'] = '';
+
+    // 2. 检查是否有相同 uid 的 Discuz 用户（迁移用户 uid 一致）
+    $member = getuserbyuid($scriptcatUid, 1);
+    if ($member) {
+        // 自动创建绑定关系并登录
+        $table->insert([
+            'uid' => $member['uid'],
+            'openid' => $scriptcatUid,
+            'name' => $username,
+            'createtime' => time(),
+        ]);
+        scriptcatAutoLogin($member['uid']);
+        return;
     }
-    require_once template("codfrm_oauth2:bind", $resp);
+
+    // 3. 没有对应的 Discuz 用户，自动创建
+    $newUid = createDiscuzUserFromScriptcat($scriptcatUid, $username, $email);
+    if ($newUid) {
+        $table->insert([
+            'uid' => $newUid,
+            'openid' => $scriptcatUid,
+            'name' => $username,
+            'createtime' => time(),
+        ]);
+        scriptcatAutoLogin($newUid);
+        return;
+    }
+
+    showError('创建账号失败，请联系管理员', 5);
 }
 
-function handleBind2()
-{
-    global $_G;
-
-    $resp = getGithubUserInfo();
-    $_G['github_login_id'] = $resp['id'];
-    $_G['github_login_name'] = $resp['name'] ?? $resp['login'];
-
-    $ctl_obj = new logging_ctl();
-    $_G['setting']['seccodestatus'] = 0;
-
-    $ctl_obj->extrafile = DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/lib/bind.php';
-    $ctl_obj->template = 'member/login';
-    $ctl_obj->on_login();
-}
-
-function handleBind3()
+/**
+ * 已登录用户绑定 ScriptCat 账号
+ */
+function handleScriptcatBind3()
 {
     global $_G;
 
@@ -102,107 +109,39 @@ function handleBind3()
         openMessage('账号未登录', $_G['siteurl']);
     }
 
-    switch ($_GET['p']) {
-        case "github":
-            handleGithubBind3();
-            break;
-        case "scriptcat":
-            handleScriptcatBind3();
-    }
-}
-
-function handleScriptcatBind3()
-{
-    global $_G;
-
     $table = new table_oauth_scriptcat();
     $raw = $table->fetchByUid($_G['uid']);
     if ($raw) {
-        showError('已绑定脚本猫的工具箱账号', 5);
+        showError('已绑定脚本猫账号', 5);
         return;
     }
 
-    $resp = fetchScriptcat($_GET['code']);
+    $code = $_GET['code'] ?? '';
+    if (!$code) {
+        // 第一次访问: 重定向到 ScriptCat 授权页
+        $sc = newScriptCatClient();
+        $redirectUri = getScriptcatRedirectUri('bind3');
+        $authorizeUrl = $sc->authorizeUrl($redirectUri, 'openid');
+        dheader('Location: ' . $authorizeUrl);
+        return;
+    }
+
+    $resp = fetchScriptcatUserInfo($code, 'bind3');
     if (!$resp) {
         showError('系统网络错误,请反馈给网站管理员', 5);
     }
 
-    $raw = $table->fetchByScriptcat($resp['data']['user_id']);
+    $raw = $table->fetchByScriptcat($resp['uid']);
     if ($raw) {
         showError('此脚本猫账号已经绑定过其它的账号了', 5);
     }
 
-
     $table->insert([
         'uid' => $_G['uid'],
-        'openid' => $resp['data']['user_id'],
-        'name' => $resp['data']['username'],
+        'openid' => $resp['uid'],
+        'name' => $resp['username'],
         'createtime' => time(),
     ]);
-
-    openMessage('绑定成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
-
-}
-
-function fetchScriptcat($code)
-{
-    global $_G;
-    $setting = $_G['cache']['plugin']['codfrm_oauth2'];
-
-    if (!$code) {
-        showError('错误请求', 3);
-    }
-
-    $sc = new ScriptCat($setting['scriptcat_oauth_client_id'], $setting['scriptcat_oauth_client_secret']);
-    $resp = $sc->accessToken($code, 'bind3');
-    if (!$resp) {
-        showError('系统网络错误,请反馈给网站管理员', 5);
-    }
-
-    if (!$resp['access_token']) {
-        showError('系统错误,请反馈给网站管理员:{message}', 5, ['message' => $resp['error_description']]);
-    }
-
-    session_start();
-    $_SESSION['oauth_github_at'] = $resp['access_token'];
-    $resp = $sc->userinfo($resp['access_token']);
-
-    if (!$resp) {
-        showError('系统网络错误,请反馈给网站管理员', 5);
-    }
-
-    if ($resp['code'] !== 0) {
-        showError('错误:{describe}', 5, ['describe' => $resp['msg']]);
-    }
-
-    return $resp;
-}
-
-function handleGithubBind3()
-{
-    global $_G, $_GET;
-    $table = new table_oauth_github();
-    $raw = $table->fetchByUid($_G['uid']);
-    if ($raw) {
-        showError('此账号已经绑定过GitHub了', 5);
-    }
-
-    $resp = fetchGithub($_GET['code']);
-    if (!$resp) {
-        showError('系统网络错误,请反馈给网站管理员', 5);
-    }
-    $raw = $table->fetchByGithub($resp['id']);
-
-    if ($raw) {
-        showError('此GitHub已经绑定过其它的账号了', 5);
-    }
-
-    C::t('#codfrm_oauth2#oauth_github')->insert(array(
-        'uid' => $_G['uid'],
-        'openid' => $resp['id'],
-        'name' => $resp['name'] ?? $resp['login'],
-        'createtime' => time()
-    ));
 
     openMessage('绑定成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
 }
@@ -215,166 +154,168 @@ function handleUnbind()
         openMessage('账号未登录', $_G['siteurl'], 'right', 3);
     }
 
+    $table = new table_oauth_scriptcat();
+    $raw = $table->fetchByUid($_G['uid']);
 
-    switch ($_GET['p']) {
-        case "github":
-            $table = new table_oauth_github();
-            $raw = $table->fetchByUid($_G['uid']);
-
-            if (!$raw) {
-                showError('没有绑定GitHub账号', 5);
-            }
-
-            if (time() < $raw['createtime'] + 86400 * 60) {
-                openMessage('绑定60天后才能解除绑定', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'error', 3);
-            }
-
-            C::t('#codfrm_oauth2#oauth_github')->delete($raw['id']);
-            openMessage('解绑成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
-        case "scriptcat":
-            $table = new table_oauth_scriptcat();
-            $raw = $table->fetchByUid($_G['uid']);
-
-            if (!$raw) {
-                showError('没有绑定脚本猫账号', 5);
-            }
-
-            if (time() < $raw['createtime'] + 86400 * 60) {
-                openMessage('绑定60天后才能解除绑定', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'error', 3);
-            }
-
-            C::t('#codfrm_oauth2#oauth_scriptcat')->delete($raw['id']);
-            openMessage('解绑成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
-    }
-}
-
-function handleGithubRedirect()
-{
-    global $setting;
-
-    if (!$setting['github_oauth_client_id']) {
-        showError('当前站点暂未设置GitHub登录方式', 3);
+    if (!$raw) {
+        showError('没有绑定脚本猫账号', 5);
     }
 
-    github();
+    if (time() < $raw['createtime'] + 86400 * 60) {
+        openMessage('绑定60天后才能解除绑定', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'error', 3);
+    }
+
+    C::t('#codfrm_oauth2#oauth_scriptcat')->delete($raw['id']);
+    openMessage('解绑成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
 }
 
-function fetchGithub($code)
+/**
+ * 用 code 换取 ScriptCat 用户信息
+ * 返回: {uid, username, email, avatar}
+ */
+function fetchScriptcatUserInfo($code, $op = 'redirect')
 {
     global $_G;
-    $setting = $_G['cache']['plugin']['codfrm_oauth2'];
 
     if (!$code) {
         showError('错误请求', 3);
     }
 
-    $resp = githubAccessToken($setting['github_oauth_client_id'], $setting['github_oauth_secret'], $code);
-
+    $sc = newScriptCatClient();
+    $redirectUri = getScriptcatRedirectUri($op);
+    $resp = $sc->accessToken($code, $redirectUri);
     if (!$resp) {
         showError('系统网络错误,请反馈给网站管理员', 5);
     }
 
-    if (!$resp['access_token']) {
-        showError('系统错误,请反馈给网站管理员:{message}', 5, ['message' => $resp['error_description']]);
+    if (!isset($resp['access_token'])) {
+        showError('系统错误,请反馈给网站管理员:{message}', 5, ['message' => $resp['error_description'] ?? $resp['message'] ?? '未知错误']);
     }
 
     session_start();
-    $_SESSION['oauth_github_at'] = $resp['access_token'];
-    $resp = githubUser($resp['access_token']);
+    $_SESSION['oauth_scriptcat_at'] = $resp['access_token'];
+    $userinfo = $sc->userinfo($resp['access_token']);
 
-    if (!$resp) {
-        showError('系统网络错误,请反馈给网站管理员', 5);
+    if (!$userinfo || !isset($userinfo['uid'])) {
+        showError('获取用户信息失败,请反馈给网站管理员', 5);
     }
 
-    if (!$resp['login']) {
-        showError('错误:{describe}', 5, ['describe' => $resp['describe']]);
-    }
-
-    return $resp;
+    return $userinfo;
 }
 
-function github()
+/**
+ * 创建 ScriptCat 客户端实例
+ */
+function newScriptCatClient()
+{
+    global $_G;
+    $setting = $_G['cache']['plugin']['codfrm_oauth2'];
+    return new ScriptCat(
+        $setting['scriptcat_oauth_client_id'],
+        $setting['scriptcat_oauth_client_secret'],
+        $setting['scriptcat_oauth_host'] ?? ''
+    );
+}
+
+/**
+ * 获取 ScriptCat OAuth 回调 URL
+ */
+function getScriptcatRedirectUri($op = 'redirect')
+{
+    global $_G;
+    return $_G['siteurl'] . 'plugin.php?id=codfrm_oauth2:bind&op=' . $op;
+}
+
+/**
+ * 自动登录指定 uid 的 Discuz 用户
+ */
+function scriptcatAutoLogin($uid)
 {
     global $_G;
 
-    $resp = fetchGithub($_GET['code']);
-    $table = new table_oauth_github();
-    $raw = $table->fetchByGithub($resp['id']);
+    require_once libfile('function/member');
+    require_once libfile('function/core');
 
-    if (!$raw) {
-        dheader('Location:' . ($_G['siteurl'] . 'plugin.php?id=codfrm_oauth2:bind&op=bind'));
-    } else {
-        require_once libfile('function/member');
-        require_once libfile('function/core');
-        if ($_G['style']) {
-            $_G['style']['defaultextstyle'] = '';
-        }
-        if ($_G['setting']) {
-            $_G['setting']['shortcut'] = '';
-            $_G['setting']['showpatchnotice'] = 1;
-        }
-        if ($_G['cookie']) {
-            $_G['cookie']['ulastactivity'] = getglobal('cookie/ulastactivity');
-        }
-        if (!($member = getuserbyuid($raw['uid'], 1))) {
-            showError('用户不存在', 5);
-        }
-
-        $cookietime = 1296000;
-        setloginstatus($member, $cookietime);
-        openMessage('登录成功,3秒后跳转', $_GET['referer'] ?? dreferer());
+    if ($_G['style']) {
+        $_G['style']['defaultextstyle'] = '';
     }
-}
+    if ($_G['setting']) {
+        $_G['setting']['shortcut'] = '';
+        $_G['setting']['showpatchnotice'] = 1;
+    }
+    if ($_G['cookie']) {
+        $_G['cookie']['ulastactivity'] = getglobal('cookie/ulastactivity');
+    }
 
-function getGithubUserInfo()
-{
+    $member = getuserbyuid($uid, 1);
+    if (!$member) {
+        showError('用户不存在', 5);
+    }
+
+    $cookietime = 1296000;
+    setloginstatus($member, $cookietime);
+
     session_start();
-    $resp = githubUser($_SESSION['oauth_github_at']);
+    $referer = $_SESSION['scriptcat_login_referer'] ?? dreferer();
+    unset($_SESSION['scriptcat_login_referer']);
 
-    if (!$resp) {
-        showError('系统网络错误,请反馈给网站管理员', 5);
-    }
-
-    if (!$resp['login']) {
-        showError('错误:{describe}', 5, ['describe' => $resp['describe']]);
-    }
-
-    return $resp;
+    openMessage('登录成功,3秒后跳转', $referer ?: $_G['siteurl']);
 }
 
-function register()
+/**
+ * 根据 ScriptCat 用户信息自动创建 Discuz 用户
+ */
+function createDiscuzUserFromScriptcat($scriptcatUid, $username, $email)
 {
     global $_G;
 
-    $resp = getGithubUserInfo();
-    $_G['github_login_id'] = $resp['id'];
-    $_G['github_login_name'] = $resp['name'] ?? $resp['login'];
-
-    $table = new table_oauth_github();
-    $raw = $table->fetchByGithub($resp['id']);
-
-    if ($raw) {
-        showError('已经绑定账号了，请重新登录', 5);
+    // 检查用户名是否已被占用，如果是则加后缀
+    $finalUsername = $username;
+    $existing = C::t('common_member')->fetch_by_username($finalUsername);
+    if ($existing) {
+        $finalUsername = $username . '_' . rand(1000, 9999);
+        $existing = C::t('common_member')->fetch_by_username($finalUsername);
+        if ($existing) {
+            $finalUsername = $username . '_' . rand(10000, 99999);
+        }
     }
 
-    $ctl_obj = new register_ctl();
-    $setting = $_G['setting'];
-    $setting['reginput'] = [
-        'username' => 'username',
-        'password' => 'password',
-        'password2' => 'password2',
-        'email' => 'email',
-    ];
-    $ctl_obj->setting = $setting;
+    // 检查邮箱是否已存在
+    if ($email) {
+        $existingEmail = C::t('common_member')->fetch_by_email($email);
+        if ($existingEmail) {
+            $email = '';
+        }
+    }
 
-    $_G['setting']['seccodedata']['rule']['register']['allow'] = 3;
-    $_G['setting']['secqaa']['status'] = 0;
+    $data = array(
+        'username' => $finalUsername,
+        'password' => '',
+        'email' => $email ?: $finalUsername . '@scriptcat.placeholder',
+        'adminid' => 0,
+        'groupid' => $_G['setting']['newusergroupid'] ?? 10,
+        'regdate' => $_G['timestamp'],
+        'credits' => 0,
+        'timeoffset' => '9999',
+    );
 
-    $ctl_obj->setting['ignorepassword'] = 1;
-    $ctl_obj->setting['checkuinlimit'] = 1;
-    $ctl_obj->setting['strongpw'] = 0;
-    $ctl_obj->setting['pwlength'] = 0;
-    $ctl_obj->extrafile = DISCUZ_ROOT . '/source/plugin/codfrm_oauth2/lib/bind.php';
-    $ctl_obj->template = 'member/register';
-    $ctl_obj->on_register();
+    $uid = C::t('common_member')->insert($data, true);
+    if (!$uid) {
+        return false;
+    }
+
+    C::t('common_member_count')->insert($uid);
+    C::t('common_member_status')->insert(array(
+        'uid' => $uid,
+        'regip' => $_G['clientip'],
+        'lastip' => $_G['clientip'],
+        'lastvisit' => $_G['timestamp'],
+        'lastactivity' => $_G['timestamp'],
+        'lastpost' => 0,
+    ));
+    C::t('common_member_profile')->insert(array('uid' => $uid));
+    C::t('common_member_field_forum')->insert(array('uid' => $uid));
+    C::t('common_member_field_home')->insert(array('uid' => $uid));
+
+    return $uid;
 }

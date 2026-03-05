@@ -1,16 +1,32 @@
+<!--{if $_G['cache']['plugin']['codfrm_oauth2']['scriptcat_oauth_host']}-->
+<script>
+(function() {
+    var href = window.location.href;
+    var loginUrl = '{$_G[siteurl]}plugin.php?id=codfrm_oauth2:bind&op=redirect&referer=' + encodeURIComponent(encodeURIComponent(document.referrer || window.location.href));
+    var registerUrl = '{$_G[cache][plugin][codfrm_oauth2][scriptcat_oauth_host]}/register';
+    if (href.indexOf('mod=register') !== -1) {
+        window.location.replace(registerUrl);
+    } else if (href.indexOf('mod=logging') !== -1 && href.indexOf('action=login') !== -1) {
+        window.location.replace(loginUrl);
+    }
+})();
+</script>
+<!--{/if}-->
+
 {eval
 function tpl_global_oauth_login_extra() {
 global $_G;
 $referer=urlencode(urlencode($_SERVER['REQUEST_URI']));
 }
 <!--{block return}-->
-<div class="y" style="margin: 0 4px; padding-right: 10px">
-    <a style="background:#fff;height:20px;padding: 2px;border-radius:5px;line-height:20px;border:1px solid #9c9c9c;display: block;text-decoration: none;cursor: pointer;"
-       href="https://github.com/login/oauth/authorize?client_id={$_G['cache']['plugin']['codfrm_oauth2']['github_oauth_client_id']}&redirect_uri={$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind%26p=github%26op=redirect%26referer={$referer}&response_type=code&scope=read:user,user:email">
-        <img style="height: 100%;" src="{$_G['siteurl']}source/plugin/codfrm_oauth2/image/github.png"/>
-        <span style="color:#000;float: right">使用 GitHub 登录</span>
+<!--{if $_G['cache']['plugin']['codfrm_oauth2']['scriptcat_oauth_host']}-->
+<div class="y" style="margin: 0 4px; padding-right: 10px;">
+    <a style="background:#4CAF50;color:#fff;height:20px;padding: 2px 8px;border-radius:5px;line-height:20px;display: block;text-decoration: none;cursor: pointer;"
+       href="{$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind&op=redirect&referer={$referer}">
+        <span style="color:#fff;">ScriptCat 登录</span>
     </a>
 </div>
+<!--{/if}-->
 <!--{/block}-->
 <!--{eval return $return;}-->
 {eval
@@ -24,13 +40,14 @@ global $_G;
 $referer=urlencode(urlencode($_SERVER['HTTP_REFERER']??$_SERVER['REQUEST_URI']));
 }
 <!--{block return}-->
-<div style="margin-right: 10px; padding-right: 10px;display: flex">
-    <a style="height:20px;padding: 2px;border-radius:5px;line-height:20px;border:1px solid #9c9c9c;display: block;text-decoration: none;cursor: pointer;"
-       href="https://github.com/login/oauth/authorize?client_id={$_G['cache']['plugin']['codfrm_oauth2']['github_oauth_client_id']}&redirect_uri={$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind%26p=github%26op=redirect%26referer={$referer}&response_type=code&scope=read:user,user:email">
-        <img style="height: 100%;" src="{$_G['siteurl']}source/plugin/codfrm_oauth2/image/github.png"/>
-        <span style="float: right">使用 GitHub 登录</span>
+<!--{if $_G['cache']['plugin']['codfrm_oauth2']['scriptcat_oauth_host']}-->
+<div style="margin-right: 10px; padding-right: 10px;display: flex;">
+    <a style="background:#4CAF50;color:#fff;height:20px;padding: 2px 8px;border-radius:5px;line-height:20px;display: block;text-decoration: none;cursor: pointer;"
+       href="{$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind&op=redirect&referer={$referer}">
+        <span style="color:#fff;">ScriptCat 登录</span>
     </a>
 </div>
+<!--{/if}-->
 <!--{/block}-->
 <!--{eval return $return;}-->
 {eval
