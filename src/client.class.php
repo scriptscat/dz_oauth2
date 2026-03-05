@@ -27,6 +27,11 @@ class plugin_codfrm_oauth2
         return tpl_global_oauth_login_extra();
     }
 
+    public function global_usernav_extra()
+    {
+        return tpl_global_oauth_usernv_extra();
+    }
+
 }
 
 class plugin_codfrm_oauth2_member extends plugin_codfrm_oauth2

@@ -4,6 +4,7 @@
 #main_messaqge_login { display: none !important; }
 .logging .tfm { display: none !important; }
 .logging .fastlg_fm { display: none !important; }
+.comiis_nvlogin .comiis_dlq { display: none !important; }
 </style>
 <script>
 (function() {
@@ -29,7 +30,7 @@ $referer=urlencode(urlencode($_SERVER['REQUEST_URI']));
 <div class="y scriptcat-login-btn" style="margin: 0 4px; padding-right: 10px;">
     <a style="background:#1296DB;color:#fff;height:20px;padding: 2px 8px;border-radius:5px;line-height:20px;display: block;text-decoration: none;cursor: pointer;"
        href="{$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind&op=redirect&referer={$referer}">
-        <span style="color:#fff;">ScriptCat 登录</span>
+        <img src="{$_G['siteurl']}source/plugin/codfrm_oauth2/image/scriptcat.png" style="height:14px;width:14px;vertical-align:middle;margin-right:4px;" alt="ScriptCat"><span style="color:#fff;vertical-align:middle;">ScriptCat 登录</span>
     </a>
 </div>
 <!--{/if}-->
@@ -50,7 +51,7 @@ $referer=urlencode(urlencode($_SERVER['HTTP_REFERER']??$_SERVER['REQUEST_URI']))
 <div style="margin-right: 10px; padding-right: 10px;display: flex;">
     <a style="background:#1296DB;color:#fff;height:20px;padding: 2px 8px;border-radius:5px;line-height:20px;display: block;text-decoration: none;cursor: pointer;"
        href="{$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind&op=redirect&referer={$referer}">
-        <span style="color:#fff;">ScriptCat 登录</span>
+        <img src="{$_G['siteurl']}source/plugin/codfrm_oauth2/image/scriptcat.png" style="height:14px;width:14px;vertical-align:middle;margin-right:4px;" alt="ScriptCat"><span style="color:#fff;vertical-align:middle;">ScriptCat 登录</span>
     </a>
 </div>
 <!--{/if}-->
