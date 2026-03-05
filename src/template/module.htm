@@ -1,4 +1,10 @@
 <!--{if $_G['cache']['plugin']['codfrm_oauth2']['scriptcat_oauth_host']}-->
+<style>
+#lsform .pns { display: none !important; }
+#main_messaqge_login { display: none !important; }
+.logging .tfm { display: none !important; }
+.logging .fastlg_fm { display: none !important; }
+</style>
 <script>
 (function() {
     var href = window.location.href;
@@ -20,8 +26,8 @@ $referer=urlencode(urlencode($_SERVER['REQUEST_URI']));
 }
 <!--{block return}-->
 <!--{if $_G['cache']['plugin']['codfrm_oauth2']['scriptcat_oauth_host']}-->
-<div class="y" style="margin: 0 4px; padding-right: 10px;">
-    <a style="background:#4CAF50;color:#fff;height:20px;padding: 2px 8px;border-radius:5px;line-height:20px;display: block;text-decoration: none;cursor: pointer;"
+<div class="y scriptcat-login-btn" style="margin: 0 4px; padding-right: 10px;">
+    <a style="background:#1296DB;color:#fff;height:20px;padding: 2px 8px;border-radius:5px;line-height:20px;display: block;text-decoration: none;cursor: pointer;"
        href="{$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind&op=redirect&referer={$referer}">
         <span style="color:#fff;">ScriptCat 登录</span>
     </a>
@@ -42,7 +48,7 @@ $referer=urlencode(urlencode($_SERVER['HTTP_REFERER']??$_SERVER['REQUEST_URI']))
 <!--{block return}-->
 <!--{if $_G['cache']['plugin']['codfrm_oauth2']['scriptcat_oauth_host']}-->
 <div style="margin-right: 10px; padding-right: 10px;display: flex;">
-    <a style="background:#4CAF50;color:#fff;height:20px;padding: 2px 8px;border-radius:5px;line-height:20px;display: block;text-decoration: none;cursor: pointer;"
+    <a style="background:#1296DB;color:#fff;height:20px;padding: 2px 8px;border-radius:5px;line-height:20px;display: block;text-decoration: none;cursor: pointer;"
        href="{$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind&op=redirect&referer={$referer}">
         <span style="color:#fff;">ScriptCat 登录</span>
     </a>
