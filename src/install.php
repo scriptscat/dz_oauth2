@@ -26,12 +26,12 @@ runquery($sql);
 // 如果绑定表已有超过10条数据，说明已迁移过，跳过
 $count = DB::result_first("SELECT COUNT(*) FROM %t", array('oauth_scriptcat'));
 if ($count <= 10) {
-    // 从主表迁移
-    DB::query("INSERT IGNORE INTO %t (uid, openid, name, createtime) SELECT uid, uid, username, UNIX_TIMESTAMP() FROM %t WHERE uid NOT IN (SELECT uid FROM %t)", array('oauth_scriptcat', 'common_member', 'oauth_scriptcat'));
+    // 从主表迁移（使用 LEFT JOIN 避免 Discuz 安全检查拦截子查询）
+    DB::query("INSERT IGNORE INTO %t (uid, openid, name, createtime) SELECT m.uid, m.uid, m.username, UNIX_TIMESTAMP() FROM %t m LEFT JOIN %t o ON m.uid = o.uid WHERE o.uid IS NULL", array('oauth_scriptcat', 'common_member', 'oauth_scriptcat'));
 
     // 从归档表迁移
     if (DB::fetch_first("SHOW TABLES LIKE '%t'", array('common_member_archive'))) {
-        DB::query("INSERT IGNORE INTO %t (uid, openid, name, createtime) SELECT uid, uid, username, UNIX_TIMESTAMP() FROM %t WHERE uid NOT IN (SELECT uid FROM %t)", array('oauth_scriptcat', 'common_member_archive', 'oauth_scriptcat'));
+        DB::query("INSERT IGNORE INTO %t (uid, openid, name, createtime) SELECT m.uid, m.uid, m.username, UNIX_TIMESTAMP() FROM %t m LEFT JOIN %t o ON m.uid = o.uid WHERE o.uid IS NULL", array('oauth_scriptcat', 'common_member_archive', 'oauth_scriptcat'));
     }
 }
 
