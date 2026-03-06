@@ -25,7 +25,7 @@ class ScriptCat
             'scope' => $scope,
             'state' => $state,
         ]);
-        return $this->host . '/api/v2/oauth/authorize?' . $params;
+        return $this->host . '/oauth/authorize?' . $params;
     }
 
     /**
@@ -58,15 +58,23 @@ class ScriptCat
         ));
 
         $response = curl_exec($curl);
+        $errno = curl_errno($curl);
         curl_close($curl);
-        return json_decode($response, true);
+        if ($errno || $response === false) {
+            return null;
+        }
+        $result = json_decode($response, true);
+        if (isset($result['code']) && $result['code'] === 0 && isset($result['data'])) {
+            return $result['data'];
+        }
+        return $result;
     }
 
     /**
      * 通过 access_token 获取用户信息
      * 返回: {uid, username, email, avatar, sub, name, picture}
      */
-    function userinfo($accessToken)
+    public function userinfo($accessToken)
     {
         $curl = curl_init();
 
@@ -85,8 +93,16 @@ class ScriptCat
         ));
 
         $response = curl_exec($curl);
+        $errno = curl_errno($curl);
         curl_close($curl);
-        return json_decode($response, true);
+        if ($errno || $response === false) {
+            return null;
+        }
+        $result = json_decode($response, true);
+        if (isset($result['code']) && $result['code'] === 0 && isset($result['data'])) {
+            return $result['data'];
+        }
+        return $result;
     }
 
 }

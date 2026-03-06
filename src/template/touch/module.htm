@@ -9,8 +9,8 @@
 <script>
 (function() {
     var href = window.location.href;
-    var loginUrl = '{$_G[siteurl]}plugin.php?id=codfrm_oauth2:bind&op=redirect&referer=' + encodeURIComponent(encodeURIComponent(document.referrer || window.location.href));
-    var registerUrl = '{$_G[cache][plugin][codfrm_oauth2][scriptcat_oauth_host]}/register';
+    var loginUrl = '{$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind&op=redirect&referer=' + encodeURIComponent(encodeURIComponent(document.referrer || window.location.href));
+    var registerUrl = '{$_G['cache']['plugin']['codfrm_oauth2']['scriptcat_oauth_host']}/register';
     if (href.indexOf('mod=register') !== -1) {
         window.location.replace(registerUrl);
     } else if (href.indexOf('mod=logging') !== -1 && href.indexOf('action=login') !== -1) {

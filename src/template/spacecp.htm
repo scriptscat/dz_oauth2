@@ -1,11 +1,9 @@
 <div>
     <div>
-        <span>ScriptCat:</span>
-        <!--{if !$scriptcat}-->
-        <a href="{$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind&op=bind3">点击绑定</a>
+        <!--{if $scriptcat}-->
+        <span>ScriptCat: 已与 {$scriptcat[name]} 关联</span>
         <!--{else}-->
-        <span>已与 {$scriptcat[name]} 绑定 <a
-                href="{$_G['siteurl']}plugin.php?id=codfrm_oauth2:bind&op=unbind">点击解除绑定</a></span>
+        <span>ScriptCat: 未绑定</span>
         <!--{/if}-->
     </div>
 </div>

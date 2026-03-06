@@ -13,15 +13,9 @@ require_once DISCUZ_ROOT . '/source/class/class_member.php';
 global $_G;
 $setting = $_G['cache']['plugin']['codfrm_oauth2'];
 
-switch ($_GET['op']) {
+switch ($_GET['op'] ?? '') {
     case 'redirect':
         handleScriptcatRedirect();
-        break;
-    case 'bind3':
-        handleScriptcatBind3();
-        break;
-    case 'unbind':
-        handleUnbind();
         break;
     default:
         showError('错误的操作');
@@ -44,15 +38,29 @@ function handleScriptcatRedirect()
         // 第一次访问: 重定向到 ScriptCat 授权页
         $sc = newScriptCatClient();
         $redirectUri = getScriptcatRedirectUri('redirect');
-        $referer = $_GET['referer'] ?? dreferer();
-        session_start();
+        $referer = sanitizeReferer($_GET['referer'] ?? dreferer());
+
+        ensureSession();
+        $state = bin2hex(random_bytes(16));
+        $_SESSION['scriptcat_oauth_state'] = $state;
         $_SESSION['scriptcat_login_referer'] = $referer;
-        $authorizeUrl = $sc->authorizeUrl($redirectUri, 'openid');
+
+        $authorizeUrl = $sc->authorizeUrl($redirectUri, 'openid', $state);
         dheader('Location: ' . $authorizeUrl);
         return;
     }
 
-    // 回调: 带 code 参数，换取用户信息
+    // 回调: 校验 state 防止 CSRF
+    ensureSession();
+    $state = $_GET['state'] ?? '';
+    $expectedState = $_SESSION['scriptcat_oauth_state'] ?? '';
+    unset($_SESSION['scriptcat_oauth_state']);
+
+    if (!$state || !$expectedState || $state !== $expectedState) {
+        showError('请求验证失败，请重新登录', 3);
+    }
+
+    // 用 code 换取用户信息
     $userinfo = fetchScriptcatUserInfo($code, 'redirect');
     $scriptcatUid = $userinfo['uid'];
     $username = $userinfo['username'];
@@ -68,105 +76,51 @@ function handleScriptcatRedirect()
         return;
     }
 
-    // 2. 检查是否有相同 uid 的 Discuz 用户（迁移用户 uid 一致）
-    $member = getuserbyuid($scriptcatUid, 1);
-    if ($member) {
-        // 自动创建绑定关系并登录
-        $table->insert([
-            'uid' => $member['uid'],
-            'openid' => $scriptcatUid,
-            'name' => $username,
-            'createtime' => time(),
-        ]);
-        scriptcatAutoLogin($member['uid']);
-        return;
+    // 2. 没有绑定记录，自动创建新用户并绑定
+    createAndBindScriptcatUser($table, $scriptcatUid, $username, $email);
+}
+
+/**
+ * 创建新用户并写入绑定记录（事务保护）
+ */
+function createAndBindScriptcatUser($table, $scriptcatUid, $username, $email)
+{
+    $newUid = createDiscuzUserFromScriptcat($scriptcatUid, $username, $email);
+    if (!$newUid) {
+        showError('创建账号失败，请联系管理员', 5);
     }
 
-    // 3. 没有对应的 Discuz 用户，自动创建
-    $newUid = createDiscuzUserFromScriptcat($scriptcatUid, $username, $email);
-    if ($newUid) {
+    // 事务写入绑定记录，防止并发竞态
+    DB::query("BEGIN");
+    try {
+        // 再次检查是否已有绑定（双重检查）
+        $existing = $table->fetchByScriptcat($scriptcatUid);
+        if ($existing) {
+            DB::query("ROLLBACK");
+            scriptcatAutoLogin($existing['uid']);
+            return;
+        }
+
         $table->insert([
             'uid' => $newUid,
             'openid' => $scriptcatUid,
             'name' => $username,
             'createtime' => time(),
         ]);
-        scriptcatAutoLogin($newUid);
-        return;
+        DB::query("COMMIT");
+    } catch (Exception $e) {
+        DB::query("ROLLBACK");
+        error_log('ScriptCat bind insert error: ' . $e->getMessage());
+        // 插入失败可能是唯一索引冲突，尝试查询已有绑定
+        $existing = $table->fetchByScriptcat($scriptcatUid);
+        if ($existing) {
+            scriptcatAutoLogin($existing['uid']);
+            return;
+        }
+        showError('绑定账号失败，请联系管理员', 5);
     }
 
-    showError('创建账号失败，请联系管理员', 5);
-}
-
-/**
- * 已登录用户绑定 ScriptCat 账号
- */
-function handleScriptcatBind3()
-{
-    global $_G;
-
-    if (!$_G['uid']) {
-        openMessage('账号未登录', $_G['siteurl']);
-    }
-
-    $table = new table_oauth_scriptcat();
-    $raw = $table->fetchByUid($_G['uid']);
-    if ($raw) {
-        showError('已绑定脚本猫账号', 5);
-        return;
-    }
-
-    $code = $_GET['code'] ?? '';
-    if (!$code) {
-        // 第一次访问: 重定向到 ScriptCat 授权页
-        $sc = newScriptCatClient();
-        $redirectUri = getScriptcatRedirectUri('bind3');
-        $authorizeUrl = $sc->authorizeUrl($redirectUri, 'openid');
-        dheader('Location: ' . $authorizeUrl);
-        return;
-    }
-
-    $resp = fetchScriptcatUserInfo($code, 'bind3');
-    if (!$resp) {
-        showError('系统网络错误,请反馈给网站管理员', 5);
-    }
-
-    $raw = $table->fetchByScriptcat($resp['uid']);
-    if ($raw) {
-        showError('此脚本猫账号已经绑定过其它的账号了', 5);
-    }
-
-    $table->insert([
-        'uid' => $_G['uid'],
-        'openid' => $resp['uid'],
-        'name' => $resp['username'],
-        'createtime' => time(),
-    ]);
-
-    openMessage('绑定成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
-}
-
-function handleUnbind()
-{
-    global $_G;
-
-    if (!$_G['uid']) {
-        openMessage('账号未登录', $_G['siteurl'], 'right', 3);
-    }
-
-    $table = new table_oauth_scriptcat();
-    $raw = $table->fetchByUid($_G['uid']);
-
-    if (!$raw) {
-        showError('没有绑定脚本猫账号', 5);
-    }
-
-    if (time() < $raw['createtime'] + 86400 * 60) {
-        openMessage('绑定60天后才能解除绑定', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'error', 3);
-    }
-
-    C::t('#codfrm_oauth2#oauth_scriptcat')->delete($raw['id']);
-    openMessage('解绑成功', $_G['siteurl'] . '/home.php?mod=spacecp&ac=plugin&id=codfrm_oauth2:spacecp', 'right', 3);
+    scriptcatAutoLogin($newUid);
 }
 
 /**
@@ -189,10 +143,12 @@ function fetchScriptcatUserInfo($code, $op = 'redirect')
     }
 
     if (!isset($resp['access_token'])) {
-        showError('系统错误,请反馈给网站管理员:{message}', 5, ['message' => $resp['error_description'] ?? $resp['message'] ?? '未知错误']);
+        $errMsg = $resp['error_description'] ?? $resp['message'] ?? '未知错误';
+        error_log('ScriptCat OAuth token error: ' . $errMsg);
+        showError('系统错误,请反馈给网站管理员', 5);
     }
 
-    session_start();
+    ensureSession();
     $_SESSION['oauth_scriptcat_at'] = $resp['access_token'];
     $userinfo = $sc->userinfo($resp['access_token']);
 
@@ -255,8 +211,8 @@ function scriptcatAutoLogin($uid)
     $cookietime = 1296000;
     setloginstatus($member, $cookietime);
 
-    session_start();
-    $referer = $_SESSION['scriptcat_login_referer'] ?? dreferer();
+    ensureSession();
+    $referer = sanitizeReferer($_SESSION['scriptcat_login_referer'] ?? dreferer());
     unset($_SESSION['scriptcat_login_referer']);
 
     openMessage('登录成功,3秒后跳转', $referer ?: $_G['siteurl']);
@@ -269,53 +225,37 @@ function createDiscuzUserFromScriptcat($scriptcatUid, $username, $email)
 {
     global $_G;
 
-    // 检查用户名是否已被占用，如果是则加后缀
-    $finalUsername = $username;
-    $existing = C::t('common_member')->fetch_by_username($finalUsername);
+    // 检查用户名是否已被占用
+    $existing = C::t('common_member')->fetch_by_username($username);
     if ($existing) {
-        $finalUsername = $username . '_' . rand(1000, 9999);
-        $existing = C::t('common_member')->fetch_by_username($finalUsername);
-        if ($existing) {
-            $finalUsername = $username . '_' . rand(10000, 99999);
-        }
+        showError('用户名已被占用，请联系管理员', 5);
+    }
+    $finalUsername = $username;
+
+    if (!$email) {
+        showError('ScriptCat 账号未设置邮箱，请先设置邮箱后再登录', 5);
+    }
+    $password = generateRandomString(16);
+
+    // 通过 UCenter 注册用户
+    loaducenter();
+    $ucUid = uc_user_register($finalUsername, $password, $email, '', '', $_G['clientip']);
+    if ($ucUid <= 0) {
+        $ucErrors = array(
+            -1 => '用户名不合法',
+            -2 => '包含不允许注册的词语',
+            -3 => '邮箱已被注册，请使用其他邮箱',
+            -4 => '邮箱格式不正确',
+            -5 => '邮箱域名不允许注册',
+            -6 => '该用户名已被注册',
+        );
+        $errMsg = $ucErrors[$ucUid] ?? 'UCenter注册失败(错误码:' . $ucUid . ')';
+        showError($errMsg, 5);
     }
 
-    // 检查邮箱是否已存在
-    if ($email) {
-        $existingEmail = C::t('common_member')->fetch_by_email($email);
-        if ($existingEmail) {
-            $email = '';
-        }
-    }
+    // 在 Discuz 中创建用户记录
+    $groupid = $_G['setting']['newusergroupid'] ?? 10;
+    C::t('common_member')->insert_user($ucUid, $finalUsername, '', $email, $_G['clientip'], $groupid, array('emailstatus' => 1));
 
-    $data = array(
-        'username' => $finalUsername,
-        'password' => '',
-        'email' => $email ?: $finalUsername . '@scriptcat.placeholder',
-        'adminid' => 0,
-        'groupid' => $_G['setting']['newusergroupid'] ?? 10,
-        'regdate' => $_G['timestamp'],
-        'credits' => 0,
-        'timeoffset' => '9999',
-    );
-
-    $uid = C::t('common_member')->insert($data, true);
-    if (!$uid) {
-        return false;
-    }
-
-    C::t('common_member_count')->insert($uid);
-    C::t('common_member_status')->insert(array(
-        'uid' => $uid,
-        'regip' => $_G['clientip'],
-        'lastip' => $_G['clientip'],
-        'lastvisit' => $_G['timestamp'],
-        'lastactivity' => $_G['timestamp'],
-        'lastpost' => 0,
-    ));
-    C::t('common_member_profile')->insert(array('uid' => $uid));
-    C::t('common_member_field_forum')->insert(array('uid' => $uid));
-    C::t('common_member_field_home')->insert(array('uid' => $uid));
-
-    return $uid;
+    return $ucUid;
 }

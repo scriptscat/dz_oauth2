@@ -9,9 +9,9 @@ class table_oauth_scriptcat extends discuz_table
     public function __construct()
     {
 
-        $this->_table = 'coauth_scriptcat';
+        $this->_table = 'oauth_scriptcat';
         $this->_pk = 'id';
-        $this->_pre_cache_key = 'coauth_scriptcat_';
+        $this->_pre_cache_key = 'oauth_scriptcat_';
 
         parent::__construct();
     }

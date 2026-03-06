@@ -18,17 +18,50 @@ function isPost()
 
 function showError($msg, $refreshtime = 3, $extra = [], $referer = "")
 {
-    return showmessage($msg, $referer ?? dreferer(), $extra, [
+    showmessage($msg, $referer ?? dreferer(), $extra, [
         'alert' => 'error',
         'refreshtime' => $refreshtime,
     ]);
+    exit();
 }
 
 function openMessage($msg, $url = '', $alert = 'right', $refreshtime = 3)
 {
-    return showmessage($msg, $url, [], [
+    showmessage($msg, $url, [], [
         'alert' => $alert,
         'refreshtime' => $refreshtime
     ]);
+    exit();
+}
+
+/**
+ * 确保 session 已启动
+ */
+function ensureSession()
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+}
+
+/**
+ * 校验 URL 是否为站内地址，防止 Open Redirect
+ */
+function sanitizeReferer($referer)
+{
+    global $_G;
+    if (!$referer) {
+        return $_G['siteurl'];
+    }
+    $parsed = parse_url($referer);
+    // 相对路径视为站内
+    if (!isset($parsed['host'])) {
+        return $referer;
+    }
+    $siteHost = parse_url($_G['siteurl'], PHP_URL_HOST);
+    if ($siteHost && strcasecmp($parsed['host'], $siteHost) === 0) {
+        return $referer;
+    }
+    return $_G['siteurl'];
 }
 
