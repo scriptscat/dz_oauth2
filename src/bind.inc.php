@@ -22,6 +22,43 @@ switch ($_GET['op'] ?? '') {
 }
 
 /**
+ * 生成 HMAC 签名的 state（短格式，URL 安全）
+ * 格式: nonce.timestamp.hmac（用 . 分隔，避免 URL 编码膨胀）
+ */
+function generateSignedState()
+{
+    global $_G;
+    $key = $_G['config']['security']['authkey'];
+    $nonce = bin2hex(random_bytes(8));
+    $ts = time();
+    $hmac = substr(hash_hmac('sha256', "$nonce.$ts", $key), 0, 16);
+    return "$nonce.$ts.$hmac";
+}
+
+/**
+ * 验证签名 state
+ */
+function verifySignedState($state, $maxAge = 600)
+{
+    global $_G;
+    $key = $_G['config']['security']['authkey'];
+
+    $parts = explode('.', $state, 3);
+    if (count($parts) !== 3) {
+        return false;
+    }
+
+    list($nonce, $ts, $hmac) = $parts;
+
+    if (abs(time() - intval($ts)) > $maxAge) {
+        return false;
+    }
+
+    $expectedHmac = substr(hash_hmac('sha256', "$nonce.$ts", $key), 0, 16);
+    return hash_equals($expectedHmac, $hmac);
+}
+
+/**
  * ScriptCat OAuth 登录流程
  */
 function handleScriptcatRedirect()
@@ -38,24 +75,25 @@ function handleScriptcatRedirect()
         // 第一次访问: 重定向到 ScriptCat 授权页
         $sc = newScriptCatClient();
         $redirectUri = getScriptcatRedirectUri('redirect');
-        $referer = sanitizeReferer($_GET['referer'] ?? dreferer());
 
-        $state = bin2hex(random_bytes(16));
-        // 用 authcode 加密 state 存入 cookie，多实例安全
-        dsetcookie('sc_oauth_state', authcode($state, 'ENCODE'), 600);
-        dsetcookie('sc_login_referer', authcode($referer, 'ENCODE'), 600);
+        // referer 用明文 cookie 存储（同域设置同域读，不依赖 authcode）
+        $rawReferer = $_GET['referer'] ?? dreferer();
+        while (strpos($rawReferer, '%') !== false && urldecode($rawReferer) !== $rawReferer) {
+            $rawReferer = urldecode($rawReferer);
+        }
+        $referer = sanitizeReferer($rawReferer);
+        dsetcookie('sc_login_referer', $referer, 600);
+
+        $state = generateSignedState();
 
         $authorizeUrl = $sc->authorizeUrl($redirectUri, 'openid', $state);
         dheader('Location: ' . $authorizeUrl);
         return;
     }
 
-    // 回调: 校验 state 防止 CSRF
+    // 回调: 验证签名 state
     $state = $_GET['state'] ?? '';
-    $expectedState = authcode(getcookie('sc_oauth_state'), 'DECODE');
-    dsetcookie('sc_oauth_state', '', -1);
-
-    if (!$state || !$expectedState || !hash_equals($expectedState, $state)) {
+    if (!verifySignedState($state)) {
         showError('请求验证失败，请重新登录', 3);
     }
 
@@ -70,7 +108,6 @@ function handleScriptcatRedirect()
     $binding = $table->fetchByScriptcat($scriptcatUid);
 
     if ($binding) {
-        // 已绑定，直接登录
         scriptcatAutoLogin($binding['uid']);
         return;
     }
@@ -89,10 +126,8 @@ function createAndBindScriptcatUser($table, $scriptcatUid, $username, $email)
         showError('创建账号失败，请联系管理员', 5);
     }
 
-    // 事务写入绑定记录，防止并发竞态
     DB::query("BEGIN");
     try {
-        // 再次检查是否已有绑定（双重检查）
         $existing = $table->fetchByScriptcat($scriptcatUid);
         if ($existing) {
             DB::query("ROLLBACK");
@@ -110,7 +145,6 @@ function createAndBindScriptcatUser($table, $scriptcatUid, $username, $email)
     } catch (Exception $e) {
         DB::query("ROLLBACK");
         error_log('ScriptCat bind insert error: ' . $e->getMessage());
-        // 插入失败可能是唯一索引冲突，尝试查询已有绑定
         $existing = $table->fetchByScriptcat($scriptcatUid);
         if ($existing) {
             scriptcatAutoLogin($existing['uid']);
@@ -129,7 +163,6 @@ function createDiscuzUserFromScriptcat($scriptcatUid, $username, $email)
 {
     global $_G;
 
-    // 检查用户名是否已被占用
     $existing = C::t('common_member')->fetch_by_username($username);
     if ($existing) {
         showError('用户名已被占用，请联系管理员', 5);
@@ -141,7 +174,6 @@ function createDiscuzUserFromScriptcat($scriptcatUid, $username, $email)
     }
     $password = generateRandomString(16);
 
-    // 通过 UCenter 注册用户
     loaducenter();
     $ucUid = uc_user_register($finalUsername, $password, $email, '', '', $_G['clientip']);
     if ($ucUid <= 0) {
@@ -157,7 +189,6 @@ function createDiscuzUserFromScriptcat($scriptcatUid, $username, $email)
         showError($errMsg, 5);
     }
 
-    // 在 Discuz 中创建用户记录
     $groupid = $_G['setting']['newusergroupid'] ?? 10;
     C::t('common_member')->insert_user($ucUid, $finalUsername, $password, $email, $_G['clientip'], $groupid, array('emailstatus' => 1));
 
@@ -166,7 +197,6 @@ function createDiscuzUserFromScriptcat($scriptcatUid, $username, $email)
 
 /**
  * 用 code 换取 ScriptCat 用户信息
- * 返回: {uid, username, email, avatar}
  */
 function fetchScriptcatUserInfo($code, $op = 'redirect')
 {
@@ -198,9 +228,6 @@ function fetchScriptcatUserInfo($code, $op = 'redirect')
     return $userinfo;
 }
 
-/**
- * 创建 ScriptCat 客户端实例
- */
 function newScriptCatClient()
 {
     global $_G;
@@ -212,9 +239,6 @@ function newScriptCatClient()
     );
 }
 
-/**
- * 获取 ScriptCat OAuth 回调 URL
- */
 function getScriptcatRedirectUri($op = 'redirect')
 {
     global $_G;
@@ -250,9 +274,8 @@ function scriptcatAutoLogin($uid)
     $cookietime = 1296000;
     setloginstatus($member, $cookietime);
 
-    $referer = sanitizeReferer(authcode(getcookie('sc_login_referer'), 'DECODE') ?: dreferer());
+    $referer = sanitizeReferer(getcookie('sc_login_referer') ?: dreferer());
     dsetcookie('sc_login_referer', '', -1);
 
     openMessage('登录成功,3秒后跳转', $referer ?: $_G['siteurl']);
 }
-
