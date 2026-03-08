@@ -178,7 +178,7 @@ function handleQQCallback() {
  */
 function queryForumQQBinding($openid) {
     $row = DB::fetch_first(
-        'SELECT uid FROM %t WHERE conuintoken=%s LIMIT 1',
+        'SELECT uid FROM %t WHERE conopenid=%s LIMIT 1',
         array('common_member_connect', $openid)
     );
     return $row ? intval($row['uid']) : 0;
