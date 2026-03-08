@@ -77,11 +77,7 @@ function handleScriptcatRedirect()
         $redirectUri = getScriptcatRedirectUri('redirect');
 
         // referer 用明文 cookie 存储（同域设置同域读，不依赖 authcode）
-        $rawReferer = $_GET['referer'] ?? dreferer();
-        while (strpos($rawReferer, '%') !== false && urldecode($rawReferer) !== $rawReferer) {
-            $rawReferer = urldecode($rawReferer);
-        }
-        $referer = sanitizeReferer($rawReferer);
+        $referer = sanitizeReferer($_GET['referer'] ?? dreferer());
         dsetcookie('sc_login_referer', $referer, 600);
 
         $state = generateSignedState();
