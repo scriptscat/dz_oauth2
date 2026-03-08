@@ -22,11 +22,7 @@ define('CURSCRIPT', 'connect');
 require './source/class/class_core.php';
 \C::app()->init();
 
-// 确保原生 PHP session 可用（Discuz 使用自己的 session 机制，
-// 原生 $_SESSION 需要显式启动）
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// 使用 Discuz cookie 机制代替 $_SESSION，兼容多实例部署
 
 // ========== QQ OAuth 端点 ==========
 define('QQ_AUTH_URL',  'https://graph.qq.com/oauth2.0/authorize');
@@ -65,10 +61,9 @@ function handleMigrate() {
     // 生成 QQ OAuth state
     $qqState = bin2hex(random_bytes(16));
 
-    // 存 session
-    $_SESSION['qq_migrate_callback'] = $callback;
-    $_SESSION['qq_migrate_state']    = $state;
-    $_SESSION['qq_migrate_qq_state'] = $qqState;
+    // 存入 cookie（authcode 加密，兼容多实例）
+    $cookieData = json_encode(['cb' => $callback, 'st' => $state, 'qs' => $qqState]);
+    dsetcookie('qq_migrate', authcode($cookieData, 'ENCODE'), 600);
 
     // 当前论坛 URL 作为 QQ 回调地址
     $redirectUri = currentUrl();
@@ -90,12 +85,14 @@ function handleQQCallback() {
     $code    = $_GET['code'];
     $qqState = isset($_GET['state']) ? $_GET['state'] : '';
 
-    $callback = isset($_SESSION['qq_migrate_callback']) ? $_SESSION['qq_migrate_callback'] : '';
-    $state    = isset($_SESSION['qq_migrate_state']) ? $_SESSION['qq_migrate_state'] : '';
-    $savedQQState = isset($_SESSION['qq_migrate_qq_state']) ? $_SESSION['qq_migrate_qq_state'] : '';
+    // 从 cookie 读取并清除
+    $cookieRaw = authcode(getcookie('qq_migrate'), 'DECODE');
+    $cookieData = $cookieRaw ? json_decode($cookieRaw, true) : [];
+    dsetcookie('qq_migrate', '', -1);
 
-    // 清除 session
-    unset($_SESSION['qq_migrate_callback'], $_SESSION['qq_migrate_state'], $_SESSION['qq_migrate_qq_state']);
+    $callback     = isset($cookieData['cb']) ? $cookieData['cb'] : '';
+    $state        = isset($cookieData['st']) ? $cookieData['st'] : '';
+    $savedQQState = isset($cookieData['qs']) ? $cookieData['qs'] : '';
 
     if (empty($callback) || empty($state) || empty($savedQQState)) {
         http_response_code(400);

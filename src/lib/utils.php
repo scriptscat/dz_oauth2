@@ -54,6 +54,10 @@ function sanitizeReferer($referer)
         return $_G['siteurl'];
     }
     $parsed = parse_url($referer);
+    // 拦截 javascript:、data: 等危险协议
+    if (isset($parsed['scheme']) && !in_array(strtolower($parsed['scheme']), ['http', 'https'], true)) {
+        return $_G['siteurl'];
+    }
     // 相对路径视为站内
     if (!isset($parsed['host'])) {
         return $referer;

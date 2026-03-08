@@ -40,10 +40,10 @@ function handleScriptcatRedirect()
         $redirectUri = getScriptcatRedirectUri('redirect');
         $referer = sanitizeReferer($_GET['referer'] ?? dreferer());
 
-        ensureSession();
         $state = bin2hex(random_bytes(16));
-        $_SESSION['scriptcat_oauth_state'] = $state;
-        $_SESSION['scriptcat_login_referer'] = $referer;
+        // 用 authcode 加密 state 存入 cookie，多实例安全
+        dsetcookie('sc_oauth_state', authcode($state, 'ENCODE'), 600);
+        dsetcookie('sc_login_referer', authcode($referer, 'ENCODE'), 600);
 
         $authorizeUrl = $sc->authorizeUrl($redirectUri, 'openid', $state);
         dheader('Location: ' . $authorizeUrl);
@@ -51,12 +51,11 @@ function handleScriptcatRedirect()
     }
 
     // 回调: 校验 state 防止 CSRF
-    ensureSession();
     $state = $_GET['state'] ?? '';
-    $expectedState = $_SESSION['scriptcat_oauth_state'] ?? '';
-    unset($_SESSION['scriptcat_oauth_state']);
+    $expectedState = authcode(getcookie('sc_oauth_state'), 'DECODE');
+    dsetcookie('sc_oauth_state', '', -1);
 
-    if (!$state || !$expectedState || $state !== $expectedState) {
+    if (!$state || !$expectedState || !hash_equals($expectedState, $state)) {
         showError('请求验证失败，请重新登录', 3);
     }
 
@@ -124,6 +123,48 @@ function createAndBindScriptcatUser($table, $scriptcatUid, $username, $email)
 }
 
 /**
+ * 根据 ScriptCat 用户信息自动创建 Discuz 用户
+ */
+function createDiscuzUserFromScriptcat($scriptcatUid, $username, $email)
+{
+    global $_G;
+
+    // 检查用户名是否已被占用
+    $existing = C::t('common_member')->fetch_by_username($username);
+    if ($existing) {
+        showError('用户名已被占用，请联系管理员', 5);
+    }
+    $finalUsername = $username;
+
+    if (!$email) {
+        showError('ScriptCat 账号未设置邮箱，请先设置邮箱后再登录', 5);
+    }
+    $password = generateRandomString(16);
+
+    // 通过 UCenter 注册用户
+    loaducenter();
+    $ucUid = uc_user_register($finalUsername, $password, $email, '', '', $_G['clientip']);
+    if ($ucUid <= 0) {
+        $ucErrors = array(
+            -1 => '用户名不合法',
+            -2 => '包含不允许注册的词语',
+            -3 => '邮箱已被注册，请使用其他邮箱',
+            -4 => '邮箱格式不正确',
+            -5 => '邮箱域名不允许注册',
+            -6 => '该用户名已被注册',
+        );
+        $errMsg = $ucErrors[$ucUid] ?? 'UCenter注册失败(错误码:' . $ucUid . ')';
+        showError($errMsg, 5);
+    }
+
+    // 在 Discuz 中创建用户记录
+    $groupid = $_G['setting']['newusergroupid'] ?? 10;
+    C::t('common_member')->insert_user($ucUid, $finalUsername, $password, $email, $_G['clientip'], $groupid, array('emailstatus' => 1));
+
+    return $ucUid;
+}
+
+/**
  * 用 code 换取 ScriptCat 用户信息
  * 返回: {uid, username, email, avatar}
  */
@@ -148,8 +189,6 @@ function fetchScriptcatUserInfo($code, $op = 'redirect')
         showError('系统错误,请反馈给网站管理员', 5);
     }
 
-    ensureSession();
-    $_SESSION['oauth_scriptcat_at'] = $resp['access_token'];
     $userinfo = $sc->userinfo($resp['access_token']);
 
     if (!$userinfo || !isset($userinfo['uid'])) {
@@ -211,51 +250,9 @@ function scriptcatAutoLogin($uid)
     $cookietime = 1296000;
     setloginstatus($member, $cookietime);
 
-    ensureSession();
-    $referer = sanitizeReferer($_SESSION['scriptcat_login_referer'] ?? dreferer());
-    unset($_SESSION['scriptcat_login_referer']);
+    $referer = sanitizeReferer(authcode(getcookie('sc_login_referer'), 'DECODE') ?: dreferer());
+    dsetcookie('sc_login_referer', '', -1);
 
     openMessage('登录成功,3秒后跳转', $referer ?: $_G['siteurl']);
 }
 
-/**
- * 根据 ScriptCat 用户信息自动创建 Discuz 用户
- */
-function createDiscuzUserFromScriptcat($scriptcatUid, $username, $email)
-{
-    global $_G;
-
-    // 检查用户名是否已被占用
-    $existing = C::t('common_member')->fetch_by_username($username);
-    if ($existing) {
-        showError('用户名已被占用，请联系管理员', 5);
-    }
-    $finalUsername = $username;
-
-    if (!$email) {
-        showError('ScriptCat 账号未设置邮箱，请先设置邮箱后再登录', 5);
-    }
-    $password = generateRandomString(16);
-
-    // 通过 UCenter 注册用户
-    loaducenter();
-    $ucUid = uc_user_register($finalUsername, $password, $email, '', '', $_G['clientip']);
-    if ($ucUid <= 0) {
-        $ucErrors = array(
-            -1 => '用户名不合法',
-            -2 => '包含不允许注册的词语',
-            -3 => '邮箱已被注册，请使用其他邮箱',
-            -4 => '邮箱格式不正确',
-            -5 => '邮箱域名不允许注册',
-            -6 => '该用户名已被注册',
-        );
-        $errMsg = $ucErrors[$ucUid] ?? 'UCenter注册失败(错误码:' . $ucUid . ')';
-        showError($errMsg, 5);
-    }
-
-    // 在 Discuz 中创建用户记录
-    $groupid = $_G['setting']['newusergroupid'] ?? 10;
-    C::t('common_member')->insert_user($ucUid, $finalUsername, '', $email, $_G['clientip'], $groupid, array('emailstatus' => 1));
-
-    return $ucUid;
-}
