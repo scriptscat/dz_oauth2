@@ -13,9 +13,7 @@ include_once template('codfrm_oauth2:module');
 class plugin_codfrm_oauth2
 {
 
-    function __construct()
-    {
-    }
+    function __construct() {}
 
     public function global_login_text()
     {
@@ -32,6 +30,10 @@ class plugin_codfrm_oauth2
         return tpl_global_oauth_usernv_extra();
     }
 
+    public function global_footer()
+    {
+        return tpl_global_oauth_footer();
+    }
 }
 
 class plugin_codfrm_oauth2_member extends plugin_codfrm_oauth2

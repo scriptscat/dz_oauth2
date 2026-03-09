@@ -1,3 +1,8 @@
+{eval
+function tpl_global_oauth_footer() {
+global $_G;
+}
+<!--{block return}-->
 <!--{if $_G['cache']['plugin']['codfrm_oauth2']['scriptcat_oauth_host']}-->
 <style>
 #lsform .pns { display: none !important; }
@@ -19,6 +24,12 @@
 })();
 </script>
 <!--{/if}-->
+<!--{/block}-->
+<!--{eval return $return;}-->
+{eval
+}
+
+}
 
 {eval
 function tpl_global_oauth_login_extra() {
